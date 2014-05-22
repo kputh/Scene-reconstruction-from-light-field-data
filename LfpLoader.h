@@ -4,11 +4,23 @@
 
 using namespace cv;
 
+/**
+ * Loads light field data from Light Field Picture files (Lytro's raw.lfp files).
+ *
+ * Utilites Nirav Patel's lfdsplitter (https://github.com/nrpatel/lfptools) to
+ * split the file into it's components and rapidjson
+ * (https://code.google.com/p/rapidjson/) to extract image metadata.
+ *
+ * @author      Kai Puth <kai.puth@student.htw-berlin.de>
+ * @version     0.1
+ * @since       2014-05-13
+ */
 class LfpLoader
 {
 	static const char IMAGE_KEY[];
 	static const char WIDTH_KEY[];
 	static const char HEIGHT_KEY[];
 public:
-	static Mat load(const string& path);
+	static Mat loadAsBayer(const string& path);
+	static Mat loadAsRGB(const string& path);
 };

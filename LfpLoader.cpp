@@ -3,12 +3,16 @@
 #include "rapidjson/document.h"
 
 
+#include <iostream>
+#include <opencv2/imgproc/imgproc.hpp>
+
+
 const char LfpLoader::IMAGE_KEY[] = "image";
 const char LfpLoader::WIDTH_KEY[] = "width";
 const char LfpLoader::HEIGHT_KEY[] = "height";
 
 
-Mat LfpLoader::load(const string& path)
+Mat LfpLoader::loadAsBayer(const string& path)
 {
 	// 1) split raw file
 	const char* cFileName = path.c_str();
@@ -16,13 +20,11 @@ Mat LfpLoader::load(const string& path)
     lfp_file_p lfp = NULL;
 
     if (!(lfp = lfp_create(cFileName))) {
-		// TODO
 		lfp_close(lfp);
 		throw new std::runtime_error("Failed to open file.");
     }
     
     if (!lfp_file_check(lfp)) {
-		// TODO
 		lfp_close(lfp);
 		throw new std::runtime_error("File is no LFP raw file.");
     }
@@ -75,18 +77,21 @@ Mat LfpLoader::load(const string& path)
 	}
 
 	// 3) extract image to Mat
-	char *buf;
     int buflen = 0;
+	char *buf;
 	buf = converted_image((unsigned char *)image, &buflen, imageLength);
-
-	Mat imageMat = Mat(height, width, CV_8UC1);		// TODO: stimmt die Bit-Tiefe?
-	int rowIndex, colIndex;
-	for (int i = 0; i < buflen; i += 3) {
-		colIndex = i / width;
-		rowIndex = i % width;
-		imageMat.at<int>(rowIndex, colIndex) = buf[i];
-	}
-
+	Mat bayerImage(height, width, CV_16UC1, (unsigned short*) buf);
 	lfp_close(lfp);
-    return imageMat;
+
+	return bayerImage;
+}
+
+Mat LfpLoader::loadAsRGB(const string& path)
+{
+	// convert the Bayer data to RGB
+	Mat bayerImage = loadAsBayer(path);
+	Mat colorImage(bayerImage.size(), CV_16UC3);
+	cvtColor(bayerImage, colorImage, CV_BayerBG2RGB);
+
+	return colorImage;
 }
