@@ -24,12 +24,18 @@
     <ClCompile Include="LfpLoader.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="LightField.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lfpsplitter.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="LfpLoader.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="LightField.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>
