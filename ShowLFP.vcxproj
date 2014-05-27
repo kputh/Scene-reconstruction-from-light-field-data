@@ -143,12 +143,14 @@
     <ClCompile Include="LfpLoader.cpp" />
     <ClCompile Include="lfpsplitter.c" />
     <ClCompile Include="LightField.cpp" />
+    <ClCompile Include="LightFieldFromLfpFile.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="LfpLoader.h" />
     <ClInclude Include="lfpsplitter.h" />
     <ClInclude Include="LightField.h" />
+    <ClInclude Include="LightFieldFromLfpFile.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

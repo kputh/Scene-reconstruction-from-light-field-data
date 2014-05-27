@@ -9,16 +9,15 @@
  * @version     0.1
  * @since       2014-05-23
  */
-
 class LightField
 {
 public:
 	LightField(void);
 	virtual ~LightField(void);
-	virtual unsigned short getLuminance(double x, double y, double u, double v) = 0;
-	virtual cv::Mat getSubapertureImage(double u, double v) = 0;
-	virtual cv::Mat getEpipolarImage(double one, double other) = 0;
-	virtual cv::Mat getImage(double focalLength) = 0;
+	virtual cv::Scalar getLuminance(const unsigned short x, const unsigned short y, const unsigned short u, const unsigned short v) = 0;
+	virtual cv::Mat getSubapertureImage(const double u, const double v) = 0;
+	virtual cv::Mat getEpipolarImage(const double one, const double other) = 0;
+	virtual cv::Mat getImage(const double focalLength) = 0;
 	virtual cv::Mat getAllInFocusImage() = 0;
 };
 
