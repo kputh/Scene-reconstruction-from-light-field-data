@@ -22,5 +22,4 @@ class LfpLoader
 	static const char HEIGHT_KEY[];
 public:
 	static Mat loadAsBayer(const string& path);
-	static Mat loadAsRGB(const string& path);
 };

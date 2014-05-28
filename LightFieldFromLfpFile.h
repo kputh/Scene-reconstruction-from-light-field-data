@@ -17,7 +17,10 @@ using namespace cv;
 class LightFieldFromLfpFile /*:
 	public LightField*/
 {
-	Mat rawLfp;
+	Mat rawImage;
+
+	static Mat convertBayer2RGB(const Mat bayerImage);
+	static Mat rectifyLensGrid(const Mat hexagonalLensGrid);
 public:
 	static const Size SPARTIAL_RESOLUTION;
 	static const Size ANGULAR_RESOLUTION;

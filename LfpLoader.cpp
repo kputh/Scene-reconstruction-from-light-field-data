@@ -85,13 +85,3 @@ Mat LfpLoader::loadAsBayer(const string& path)
 
 	return bayerImage;
 }
-
-Mat LfpLoader::loadAsRGB(const string& path)
-{
-	// convert the Bayer data to RGB
-	Mat bayerImage = loadAsBayer(path);
-	Mat colorImage(bayerImage.size(), CV_16UC3);
-	cvtColor(bayerImage, colorImage, CV_BayerBG2RGB);
-
-	return colorImage;
-}
