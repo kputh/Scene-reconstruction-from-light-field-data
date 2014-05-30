@@ -17,15 +17,15 @@ Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid)
 {
 	// 1) determine dimensions of the hexagonal grid and the rectilinear grid
 	const Size lensSize					= LightFieldFromLfpFile::ANGULAR_RESOLUTION;
-	const unsigned int rowCount			= hexagonalLensGrid.size().height / lensSize.height - 1; // TODO -1?
-	const unsigned int lensCountPerRow	= hexagonalLensGrid.size().width / lensSize.width - 1;	// TODO -1?
+	const unsigned int rowCount			= hexagonalLensGrid.size().height / lensSize.height - 2; // TODO -1?
+	const unsigned int lensCountPerRow	= hexagonalLensGrid.size().width / lensSize.width - 2;	// TODO -1?
 	const Size rowSize					= Size(lensCountPerRow * lensSize.width, lensSize.height);
 	const Size rectifiedSize			= Size(lensCountPerRow * lensSize.width, rowCount * lensSize.height);
 
 	// 2) prepare row mask
 	const Point toNextLensInRow			= Point(lensSize.width, 0);
 	const unsigned short lensRadius		= lensSize.width / 2;
-	const Scalar circleColor			= Scalar(1,1,1);
+	const Scalar circleColor			= Scalar(1, 1, 1);
 	const int circleFill				= -1;
 	Mat rowMask							= Mat::zeros(rowSize, CV_8UC1);
 	Point center						= Point(lensRadius, lensRadius);
@@ -38,22 +38,24 @@ Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid)
 		center += toNextLensInRow;
 	}
 
-	// [unwarp image of hexagonal grid]
-	const double rotationAngle	= 0.002145454753190279; // TODO
-	const Point rotationCenter	= Point(5, 3);
+	// 3) align grid to image borders
+	// TODO read from image metadata
+	//const double rotationAngle	= 0.139745838328709;	// degrees of counter-clockwise rotation, manually measured
+	const double rotationAngle	= 0.122925502; // 0.002145454753190279 radians of counter-clockwise rotation, from image metadata
+	const Point rotationCenter	= Point(hexagonalLensGrid.size().width / 2, hexagonalLensGrid.size().height / 2);
 	const double rotationScale	= 1.0;
     const Mat rotation			= getRotationMatrix2D(rotationCenter, rotationAngle, rotationScale);
 	Mat alignedGrid;
 	warpAffine(hexagonalLensGrid, alignedGrid, rotation, hexagonalLensGrid.size());
 
-	// 3) copy each row from the hexagonal grid to the rectilinear grid
+	// 4) copy each row from the hexagonal grid to the rectilinear grid
 	Mat rectifiedLensGrid = Mat::zeros(rectifiedSize, hexagonalLensGrid.type());
 	Rect srcRect, dstRect;
 	Mat srcROI, dstROI;
-	const float srcBaseY			= 3.0;
-	const float srcIncrementY		= 8.6;
-	const unsigned int srcOddRowX	= 0;
-	const unsigned int srcEvenRowX	= 5;
+	const float srcBaseY			= 6.0f;
+	const float srcIncrementY		= 8.6f;
+	const unsigned int srcOddRowX	= 7;
+	const unsigned int srcEvenRowX	= 12;
 	unsigned int srcX, srcY, dstY;
 	const unsigned int dstX			= 0;
 	for (unsigned int rowIndex = 0; rowIndex < rowCount; rowIndex++)
@@ -63,7 +65,7 @@ Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid)
 		srcRect	= Rect(srcX, srcY, rowSize.width, rowSize.height);
 		dstY	= rowIndex * lensSize.height;
 		dstRect	= Rect(dstX, dstY, rowSize.width, rowSize.height);
-		srcROI	= Mat(hexagonalLensGrid, srcRect);
+		srcROI	= Mat(alignedGrid, srcRect);
 		dstROI	= Mat(rectifiedLensGrid, dstRect);
 		//dstROI.setTo(srcROI, rowMask);
 		srcROI.copyTo(dstROI);
@@ -71,9 +73,7 @@ Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid)
 		//dstROI = srcROI * rowMask;
 	}
 
-	//return srcROI;
-	//return hexagonalLensGrid;
-	//return rowMask;
+	//return alignedGrid;
 	return rectifiedLensGrid;
 }
 
@@ -106,8 +106,8 @@ LightFieldFromLfpFile::~LightFieldFromLfpFile(void)
 Vec3s LightFieldFromLfpFile::getLuminance(const unsigned short x, const unsigned short y, const unsigned short u, const unsigned short v)
 {
 	// ToDo odd rows
-	const bool isOddRow = (y & 1 == 1);
-	const unsigned int columnOffset = isOddRow ? (ANGULAR_RESOLUTION.width / 2.) : 0;
+	const bool isOddRow = ((y & 1) == 1);
+	const unsigned int columnOffset = isOddRow ? (ANGULAR_RESOLUTION.width / 2) : 0;
 	const unsigned int rawX = x * this->ANGULAR_RESOLUTION.width + columnOffset + u;
 	const unsigned int rawY = y * this->ANGULAR_RESOLUTION.height + v;
 

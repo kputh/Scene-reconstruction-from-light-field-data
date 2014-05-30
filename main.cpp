@@ -54,10 +54,15 @@ int main( int argc, char** argv )
 	//cout << "Displaying sub-aperture image at angular coordinates (5, 5)." << endl;
 	cout << "Displaying raw image: de-bayered and rectified" << endl;
 
+	// save image to debug
+	imwrite("out.png", image);
+	cout << "Image saved as file." << endl;
+
+	/*
     namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display. (original size)
     //namedWindow( "Display window", WINDOW_NORMAL );// Create a window for display. (scale down size)
     imshow( "Display window", image );                   // Show our image inside it.
-
+	*/
     waitKey(0);                                          // Wait for a keystroke in the window
     return 0;
 }
