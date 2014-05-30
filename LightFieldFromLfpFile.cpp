@@ -1,4 +1,5 @@
 #include <string>
+#include <math.h>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "LfpLoader.h"
 #include "LightFieldFromLfpFile.h"
@@ -14,43 +15,65 @@ Mat LightFieldFromLfpFile::convertBayer2RGB(const Mat bayerImage)
 
 Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid)
 {
-	// 1) isolate one source area for odd and even rows each. Both areas have
-	// the size of the output image. The lens' images are at their final
-	// positions.
-	// 2) create one mask for the lens' images for odd and even rows each
-	// 3) paste the lens' images into a new, empty image.
+	// 1) determine dimensions of the hexagonal grid and the rectilinear grid
+	const Size lensSize					= LightFieldFromLfpFile::ANGULAR_RESOLUTION;
+	const unsigned int rowCount			= hexagonalLensGrid.size().height / lensSize.height - 1; // TODO -1?
+	const unsigned int lensCountPerRow	= hexagonalLensGrid.size().width / lensSize.width - 1;	// TODO -1?
+	const Size rowSize					= Size(lensCountPerRow * lensSize.width, lensSize.height);
+	const Size rectifiedSize			= Size(lensCountPerRow * lensSize.width, rowCount * lensSize.height);
 
-	const unsigned int rowCount = hexagonalLensGrid.size().height / LightFieldFromLfpFile::ANGULAR_RESOLUTION.height; // TODO -1?
-	const unsigned int lensCountPerRow = hexagonalLensGrid.size().width / LightFieldFromLfpFile::ANGULAR_RESOLUTION.width;	// TODO -1?
-	const Size rowSize = Size(lensCountPerRow * LightFieldFromLfpFile::ANGULAR_RESOLUTION.width, LightFieldFromLfpFile::ANGULAR_RESOLUTION.height);
-
-	Rect oddArea = Rect();	// TODO
-	Rect evenArea = Rect();	// TODO
-	Mat oddCut = Mat(hexagonalLensGrid, oddArea);
-	Mat evenCut = Mat(hexagonalLensGrid, evenArea);
-
-	Mat *currentMask;
-	Mat oddMask		= Mat::zeros(hexagonalLensGrid.size(), CV_8UC1);
-	Mat evenMask	= Mat::zeros(hexagonalLensGrid.size(), CV_8UC1);
-	Point center = Point(5, 5);
-	const Point toNextLensInRow = Point(10, 0);
-	const unsigned short radius = 5;
-	for (unsigned int rowIndex; rowIndex < rowCount; rowIndex++)
+	// 2) prepare row mask
+	const Point toNextLensInRow			= Point(lensSize.width, 0);
+	const unsigned short lensRadius		= lensSize.width / 2;
+	const Scalar circleColor			= Scalar(1,1,1);
+	const int circleFill				= -1;
+	Mat rowMask							= Mat::zeros(rowSize, CV_8UC1);
+	Point center						= Point(lensRadius, lensRadius);
+	for (unsigned int lensIndex = 0; lensIndex < lensCountPerRow; lensIndex++)
 	{
-		currentMask = (rowIndex % 2 == 0) ? evenMask : oddMask;
-		// TODO center
-		center = Point(0,0);
-		for (unsigned int lensIndex; lensIndex < lensCountPerRow; lensIndex++)
-		{
-			center += toNextLensInRow;
-			circle(currentMask, center, radius, Scalar(255,255,255), -1);
-		}
+		// mark area of current lens' image
+		circle(rowMask, center, lensRadius, circleColor, circleFill);
+
+		// move one lens to the right
+		center += toNextLensInRow;
 	}
 
-	Mat rectifiedLensGrid = Mat::zeros(evenCut.size(), hexagonalLensGrid.type());
-	rectifiedLensGrid.setTo(oddCut, oddMask);
-	rectifiedLensGrid.setTo(evenCut, evenMask);
+	// [unwarp image of hexagonal grid]
+	const double rotationAngle	= 0.002145454753190279; // TODO
+	const Point rotationCenter	= Point(5, 3);
+	const double rotationScale	= 1.0;
+    const Mat rotation			= getRotationMatrix2D(rotationCenter, rotationAngle, rotationScale);
+	Mat alignedGrid;
+	warpAffine(hexagonalLensGrid, alignedGrid, rotation, hexagonalLensGrid.size());
 
+	// 3) copy each row from the hexagonal grid to the rectilinear grid
+	Mat rectifiedLensGrid = Mat::zeros(rectifiedSize, hexagonalLensGrid.type());
+	Rect srcRect, dstRect;
+	Mat srcROI, dstROI;
+	const float srcBaseY			= 3.0;
+	const float srcIncrementY		= 8.6;
+	const unsigned int srcOddRowX	= 0;
+	const unsigned int srcEvenRowX	= 5;
+	unsigned int srcX, srcY, dstY;
+	const unsigned int dstX			= 0;
+	for (unsigned int rowIndex = 0; rowIndex < rowCount; rowIndex++)
+	{
+		srcX	= (rowIndex % 2 == 0) ? srcEvenRowX : srcOddRowX;
+		srcY	= floor((srcBaseY + rowIndex * srcIncrementY) + 0.5);
+		srcRect	= Rect(srcX, srcY, rowSize.width, rowSize.height);
+		dstY	= rowIndex * lensSize.height;
+		dstRect	= Rect(dstX, dstY, rowSize.width, rowSize.height);
+		srcROI	= Mat(hexagonalLensGrid, srcRect);
+		dstROI	= Mat(rectifiedLensGrid, dstRect);
+		//dstROI.setTo(srcROI, rowMask);
+		srcROI.copyTo(dstROI);
+		//srcROI.copyTo(dstROI, rowMask);
+		//dstROI = srcROI * rowMask;
+	}
+
+	//return srcROI;
+	//return hexagonalLensGrid;
+	//return rowMask;
 	return rectifiedLensGrid;
 }
 
