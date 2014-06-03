@@ -52,13 +52,15 @@ int main( int argc, char** argv )
 	cout << "Loading of file at " << argv[1] << " successful." << endl;
 	cout << "Raw sensor image has " << image.size().width << " x " << image.size().height << " pixels." << endl;
 	//cout << "Displaying sub-aperture image at angular coordinates (5, 5)." << endl;
-	cout << "Displaying raw image: de-bayered and rectified" << endl;
+	//cout << "Displaying raw image: de-bayered and rectified" << endl;
 
-	// save image to debug
-	imwrite("out.png", image);
+	// save image to file
+	string fileName = "out.png";
+	imwrite(fileName, image);
 	cout << "Image saved as file." << endl;
 
 	/*
+	// show image
     namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display. (original size)
     //namedWindow( "Display window", WINDOW_NORMAL );// Create a window for display. (scale down size)
     imshow( "Display window", image );                   // Show our image inside it.

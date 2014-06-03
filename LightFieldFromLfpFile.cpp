@@ -5,6 +5,12 @@
 #include "LightFieldFromLfpFile.h"
 
 
+double round(double value)
+{
+	return floor(value + 0.5);
+}
+
+
 Mat LightFieldFromLfpFile::convertBayer2RGB(const Mat bayerImage)
 {
 	Mat colorImage(bayerImage.size(), CV_16UC3);
@@ -15,65 +21,65 @@ Mat LightFieldFromLfpFile::convertBayer2RGB(const Mat bayerImage)
 
 Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid)
 {
-	// 1) determine dimensions of the hexagonal grid and the rectilinear grid
-	const Size lensSize					= LightFieldFromLfpFile::ANGULAR_RESOLUTION;
-	const unsigned int rowCount			= hexagonalLensGrid.size().height / lensSize.height - 2; // TODO -1?
-	const unsigned int lensCountPerRow	= hexagonalLensGrid.size().width / lensSize.width - 2;	// TODO -1?
-	const Size rowSize					= Size(lensCountPerRow * lensSize.width, lensSize.height);
-	const Size rectifiedSize			= Size(lensCountPerRow * lensSize.width, rowCount * lensSize.height);
+	// 1) read LFP metadata
+	// TODO
+	const double pixelPitch		= 0.0000013999999761581417;
+	const double lensPitch		= 0.00001389859962463379;
+	const double rotationAngle	= 0.122925502;
+	const double scaleFactorX	= 1.0;
+	const double scaleFactorY	= 1.0014984607696533;
 
-	// 2) prepare row mask
-	const Point toNextLensInRow			= Point(lensSize.width, 0);
-	const unsigned short lensRadius		= lensSize.width / 2;
-	const Scalar circleColor			= Scalar(1, 1, 1);
-	const int circleFill				= -1;
-	Mat rowMask							= Mat::zeros(rowSize, CV_8UC1);
-	Point center						= Point(lensRadius, lensRadius);
-	for (unsigned int lensIndex = 0; lensIndex < lensCountPerRow; lensIndex++)
-	{
-		// mark area of current lens' image
-		circle(rowMask, center, lensRadius, circleColor, circleFill);
-
-		// move one lens to the right
-		center += toNextLensInRow;
-	}
-
-	// 3) align grid to image borders
-	// TODO read from image metadata
-	//const double rotationAngle	= 0.139745838328709;	// degrees of counter-clockwise rotation, manually measured
-	const double rotationAngle	= 0.122925502; // 0.002145454753190279 radians of counter-clockwise rotation, from image metadata
+	// 2) align grid to image borders
 	const Point rotationCenter	= Point(hexagonalLensGrid.size().width / 2, hexagonalLensGrid.size().height / 2);
 	const double rotationScale	= 1.0;
     const Mat rotation			= getRotationMatrix2D(rotationCenter, rotationAngle, rotationScale);
-	Mat alignedGrid;
-	warpAffine(hexagonalLensGrid, alignedGrid, rotation, hexagonalLensGrid.size());
+	Mat rotatedGrid, alignedGrid;
+	warpAffine(hexagonalLensGrid, rotatedGrid, rotation, hexagonalLensGrid.size());
+	resize(rotatedGrid, alignedGrid, Size(), 1.0 / scaleFactorX, 1.0 / scaleFactorY);
 
-	// 4) copy each row from the hexagonal grid to the rectilinear grid
-	Mat rectifiedLensGrid = Mat::zeros(rectifiedSize, hexagonalLensGrid.type());
+	// 3) determine dimensions of the hexagonal grid and the rectilinear grid
+	// TODO pixel pitch und lens pitch aus Metadaten des LFP auslesen
+	const double lensPitchInPixels		= lensPitch / pixelPitch;
+	const unsigned int lensImageLength	= (unsigned int) ceil(lensPitchInPixels);
+	const unsigned int rowCount			= (unsigned int)((double) hexagonalLensGrid.size().height / lensPitchInPixels) - 2; // TODO -1?
+	const unsigned int lensCountPerRow	= (unsigned int)((double) hexagonalLensGrid.size().width / lensPitchInPixels) - 2; // TODO -1?
+	//const Size rowSize					= Size(lensCountPerRow * lensImageLength, lensImageLength);
+	const Size rectifiedSize			= Size(lensCountPerRow * lensImageLength, rowCount * lensImageLength);
+
+	// 4) prepare row mask
+	const int lensRadius		= (int) ceil(lensPitchInPixels / 2.0);
+	const Point lensCenter		= Point(lensRadius, lensRadius);
+	const Scalar circleColor	= Scalar(1, 1, 1);
+	const int circleFill		= -1;
+	Mat lensMask				= Mat::zeros(lensImageLength, lensImageLength, CV_8UC1);
+	circle(lensMask, lensCenter, lensRadius, circleColor, circleFill);
+
+	// 5) copy each row from the hexagonal grid to the rectilinear grid
+	Mat rectifiedLensGrid			= Mat::zeros(rectifiedSize, hexagonalLensGrid.type());
 	Rect srcRect, dstRect;
 	Mat srcROI, dstROI;
-	const float srcBaseY			= 6.0f;
-	const float srcIncrementY		= 8.6f;
-	const unsigned int srcOddRowX	= 7;
-	const unsigned int srcEvenRowX	= 12;
-	unsigned int srcX, srcY, dstY;
-	const unsigned int dstX			= 0;
+	const double PI					= 3.14159265359;
+	const double srcBaseX			= 7.0;
+	const double srcBaseY			= 6.0;
+	const double srcIncrementY		= cos(PI / 6.0) * lensPitchInPixels; // Abstand übereinander liegender Linsen in Pixeln
+	unsigned int srcX, srcY, dstX, dstY;
 	for (unsigned int rowIndex = 0; rowIndex < rowCount; rowIndex++)
-	{
-		srcX	= (rowIndex % 2 == 0) ? srcEvenRowX : srcOddRowX;
-		srcY	= floor((srcBaseY + rowIndex * srcIncrementY) + 0.5);
-		srcRect	= Rect(srcX, srcY, rowSize.width, rowSize.height);
-		dstY	= rowIndex * lensSize.height;
-		dstRect	= Rect(dstX, dstY, rowSize.width, rowSize.height);
-		srcROI	= Mat(alignedGrid, srcRect);
-		dstROI	= Mat(rectifiedLensGrid, dstRect);
-		//dstROI.setTo(srcROI, rowMask);
-		srcROI.copyTo(dstROI);
-		//srcROI.copyTo(dstROI, rowMask);
-		//dstROI = srcROI * rowMask;
-	}
+		for (unsigned int lensIndex = 0; lensIndex < lensCountPerRow; lensIndex++)
+		{
+			srcX	= (rowIndex % 2 == 0) ?
+				(unsigned int) round(srcBaseX + ((double) lensIndex + 0.5) * lensPitchInPixels) :
+				(unsigned int) round(srcBaseX + (double) lensIndex * lensPitchInPixels);
+			srcY	= (unsigned int) round(srcBaseY + (double) rowIndex * srcIncrementY);
+			dstX	= lensIndex * lensImageLength;
+			dstY	= rowIndex * lensImageLength;
+			// TODO compare to getRectSubPix()
+			srcRect	= Rect(srcX, srcY, lensImageLength, lensImageLength);
+			dstRect	= Rect(dstX, dstY, lensImageLength, lensImageLength);
+			srcROI	= Mat(alignedGrid, srcRect);
+			dstROI	= Mat(rectifiedLensGrid, dstRect);
+			srcROI.copyTo(dstROI, lensMask);
+		}
 
-	//return alignedGrid;
 	return rectifiedLensGrid;
 }
 
