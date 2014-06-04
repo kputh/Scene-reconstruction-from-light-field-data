@@ -1,5 +1,6 @@
+#define _USE_MATH_DEFINES	// for math constants in C++
 #include <string>
-#include <math.h>
+#include <cmath>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "LfpLoader.h"
 #include "LightFieldFromLfpFile.h"
@@ -7,7 +8,7 @@
 
 double round(double value)
 {
-	return floor(value + 0.5);
+	return (value < 0.0) ? ceil(value - 0.5) : floor(value + 0.5);;
 }
 
 
@@ -25,61 +26,74 @@ Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid)
 	// TODO
 	const double pixelPitch		= 0.0000013999999761581417;
 	const double lensPitch		= 0.00001389859962463379;
-	const double rotationAngle	= 0.122925502;
+	const double rotationAngle	= 0.002145454753190279;
 	const double scaleFactorX	= 1.0;
 	const double scaleFactorY	= 1.0014984607696533;
+	const double sensorOffsetX	= 0.0000018176757097244258;
+	const double sensorOffsetY	= -0.0000040150876045227051;
 
-	// 2) align grid to image borders
-	const Point rotationCenter	= Point(hexagonalLensGrid.size().width / 2, hexagonalLensGrid.size().height / 2);
-	const double rotationScale	= 1.0;
-    const Mat rotation			= getRotationMatrix2D(rotationCenter, rotationAngle, rotationScale);
-	Mat rotatedGrid, alignedGrid;
-	warpAffine(hexagonalLensGrid, rotatedGrid, rotation, hexagonalLensGrid.size());
-	resize(rotatedGrid, alignedGrid, Size(), 1.0 / scaleFactorX, 1.0 / scaleFactorY);
+	const Point2d imageCenter	= Point2d(hexagonalLensGrid.size()) * 0.5;
+	const Point2d sensorOffset	= Point2d(sensorOffsetX, sensorOffsetY) * (1.0 / pixelPitch);
+	const Point2d mlaCenter		= imageCenter + sensorOffset;
 
-	// 3) determine dimensions of the hexagonal grid and the rectilinear grid
-	// TODO pixel pitch und lens pitch aus Metadaten des LFP auslesen
+	// 2) determine size of the hexagonal grid and the rectilinear grid
 	const double lensPitchInPixels		= lensPitch / pixelPitch;
+	const double rowHeight				= lensPitchInPixels * cos(rotationAngle + M_PI / 6.0);
 	const unsigned int lensImageLength	= (unsigned int) ceil(lensPitchInPixels);
-	const unsigned int rowCount			= (unsigned int)((double) hexagonalLensGrid.size().height / lensPitchInPixels) - 2; // TODO -1?
-	const unsigned int lensCountPerRow	= (unsigned int)((double) hexagonalLensGrid.size().width / lensPitchInPixels) - 2; // TODO -1?
-	//const Size rowSize					= Size(lensCountPerRow * lensImageLength, lensImageLength);
+	const Size lensImageSize			= Size(lensImageLength, lensImageLength);
+	const unsigned int rowCount			= floor(hexagonalLensGrid.size().height / rowHeight) - 2;
+	const unsigned int lensCountPerRow	= floor(hexagonalLensGrid.size().width / lensPitchInPixels) - 2;
 	const Size rectifiedSize			= Size(lensCountPerRow * lensImageLength, rowCount * lensImageLength);
 
-	// 4) prepare row mask
+	// 3) prepare lens mask
 	const int lensRadius		= (int) ceil(lensPitchInPixels / 2.0);
-	const Point lensCenter		= Point(lensRadius, lensRadius);
+	Point2d lensCenter			= Point2d(lensRadius, lensRadius);
 	const Scalar circleColor	= Scalar(1, 1, 1);
-	const int circleFill		= -1;
-	Mat lensMask				= Mat::zeros(lensImageLength, lensImageLength, CV_8UC1);
-	circle(lensMask, lensCenter, lensRadius, circleColor, circleFill);
+	Mat lensMask				= Mat::zeros(lensImageSize, CV_8UC1);
+	circle(lensMask, lensCenter, lensRadius, circleColor, CV_FILLED);
 
-	// 5) copy each row from the hexagonal grid to the rectilinear grid
+	// 4) copy each lens' image from the hexagonal grid to the rectilinear grid
 	Mat rectifiedLensGrid			= Mat::zeros(rectifiedSize, hexagonalLensGrid.type());
 	Rect srcRect, dstRect;
 	Mat srcROI, dstROI;
-	const double PI					= 3.14159265359;
-	const double srcBaseX			= 7.0;
-	const double srcBaseY			= 6.0;
-	const double srcIncrementY		= cos(PI / 6.0) * lensPitchInPixels; // Abstand übereinander liegender Linsen in Pixeln
-	unsigned int srcX, srcY, dstX, dstY;
+	int  centeredRowIndex, centeredLensIndex;
+	const double angleToNextRow			= rotationAngle + M_PI / 3.0;	// 60° to MLA axis
+	const Point2d oneLensToTheRight		= Point2d(cos(rotationAngle), sin(rotationAngle)) * lensPitchInPixels;
+	const Point2d toNextRow				= Point2d(cos(angleToNextRow), sin(angleToNextRow)) * lensPitchInPixels;;
+	const Point2d fromCenterToCorner	= Point2d(1, 1) * -(lensPitchInPixels / 2.0);
+	Point2d lensImageCorner;
+	Point srcCorner, dstCorner;
 	for (unsigned int rowIndex = 0; rowIndex < rowCount; rowIndex++)
+	{
 		for (unsigned int lensIndex = 0; lensIndex < lensCountPerRow; lensIndex++)
 		{
-			srcX	= (rowIndex % 2 == 0) ?
-				(unsigned int) round(srcBaseX + ((double) lensIndex + 0.5) * lensPitchInPixels) :
-				(unsigned int) round(srcBaseX + (double) lensIndex * lensPitchInPixels);
-			srcY	= (unsigned int) round(srcBaseY + (double) rowIndex * srcIncrementY);
-			dstX	= lensIndex * lensImageLength;
-			dstY	= rowIndex * lensImageLength;
-			// TODO compare to getRectSubPix()
-			srcRect	= Rect(srcX, srcY, lensImageLength, lensImageLength);
-			dstRect	= Rect(dstX, dstY, lensImageLength, lensImageLength);
-			srcROI	= Mat(alignedGrid, srcRect);
-			dstROI	= Mat(rectifiedLensGrid, dstRect);
-			srcROI.copyTo(dstROI, lensMask);
-		}
+			centeredRowIndex	= rowIndex - rowCount / 2;
+			centeredLensIndex	= lensIndex - lensCountPerRow / 2;
+			lensCenter	= (centeredLensIndex - floor(centeredRowIndex / 2.0)) * oneLensToTheRight +
+				centeredRowIndex * toNextRow;
+			lensCenter	= mlaCenter + Point2d(lensCenter.x * scaleFactorX,	// scaling
+				lensCenter.y * scaleFactorY);
+			lensImageCorner = lensCenter + fromCenterToCorner;
+			srcCorner	= Point(round(lensImageCorner.x), round(lensImageCorner.y));
 
+			dstCorner	= Point(lensIndex, rowIndex) * (int) lensImageLength;
+
+			srcRect	= Rect(lensImageCorner, lensImageSize);
+			dstRect	= Rect(dstCorner, lensImageSize);
+
+			srcROI	= Mat(hexagonalLensGrid, srcRect);
+			dstROI	= Mat(rectifiedLensGrid, dstRect);
+
+			srcROI.copyTo(dstROI, lensMask);
+			//srcROI.copyTo(dstROI);
+
+			//rectangle(hexagonalLensGrid, srcRect, Scalar(255,0,0), 1);
+			//rectangle(rectifiedLensGrid, dstRect, Scalar(255,0,0), 1);
+			//circle(hexagonalLensGrid, Point(round(lensCenter.x), round(lensCenter.y)), 0, Scalar(255,0,0));
+		}
+	}
+
+	//return hexagonalLensGrid;
 	return rectifiedLensGrid;
 }
 
