@@ -97,7 +97,8 @@ Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid)
 	return rectifiedLensGrid;
 }
 
-	
+
+// TODO aus LFP Metadaten auslesen
 const cv::Size LightFieldFromLfpFile::SPARTIAL_RESOLUTION = Size(328, 328);
 const cv::Size LightFieldFromLfpFile::ANGULAR_RESOLUTION = Size(10, 10);
 
@@ -125,10 +126,7 @@ LightFieldFromLfpFile::~LightFieldFromLfpFile(void)
 
 Vec3s LightFieldFromLfpFile::getLuminance(const unsigned short x, const unsigned short y, const unsigned short u, const unsigned short v)
 {
-	// ToDo odd rows
-	const bool isOddRow = ((y & 1) == 1);
-	const unsigned int columnOffset = isOddRow ? (ANGULAR_RESOLUTION.width / 2) : 0;
-	const unsigned int rawX = x * this->ANGULAR_RESOLUTION.width + columnOffset + u;
+	const unsigned int rawX = x * this->ANGULAR_RESOLUTION.width + u;
 	const unsigned int rawY = y * this->ANGULAR_RESOLUTION.height + v;
 
 	return this->rawImage.at<Vec3s>(rawX, rawY);
@@ -137,7 +135,7 @@ Vec3s LightFieldFromLfpFile::getLuminance(const unsigned short x, const unsigned
 
 Mat LightFieldFromLfpFile::getSubapertureImage(const unsigned short u, const unsigned short v)
 {
-	Mat subapertureImage(this->SPARTIAL_RESOLUTION, CV_16UC3);
+	Mat subapertureImage(this->SPARTIAL_RESOLUTION, CV_16UC3);	// TODO Auflösung ist durch Linsenpacking größer
 
 	for (int y = 0; y < this->SPARTIAL_RESOLUTION.height; y++)
 		for (int x = 0; x < this->SPARTIAL_RESOLUTION.width - 1; x++)
