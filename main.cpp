@@ -16,34 +16,33 @@ int main( int argc, char** argv )
      return -1;
     }
 
-    Mat rawImage, subapertureImage;
+    Mat rawImage, subapertureImage, image;
 	try {
 		LightFieldFromLfpFile lf(argv[1]);
 
 		rawImage = lf.getRawImage();
-		subapertureImage = lf.getSubapertureImage(5, 5);
+		//subapertureImage = lf.getSubapertureImage(5, 5);
 		//image = lf.getAllSubaperturesInOneImage();
+		image = lf.getImage(0.0068200001716613766 * 0.8);
 	} catch (std::exception* e) {
 		cerr << e->what() << endl;
 		return -1;
 	}
 
 	cout << "Loading of file at " << argv[1] << " successful." << endl;
-	//cout << "Raw sensor image has " << image.size().width << " x " << image.size().height << " pixels." << endl;
-	cout << "Displaying sub-aperture image at angular coordinates (5, 5)." << endl;
-	//cout << "Displaying raw image: de-bayered and rectified" << endl;
+	cout << "Image has " << image.size().width << " x " << image.size().height << " pixels." << endl;
+	cout << "Displaying extracted image" << endl;
 
 	// save image to file
 	string fileName = "subapertureImage.png";
-	imwrite(fileName, subapertureImage);
+	imwrite(fileName, image);
 	cout << "Image saved as file." << endl;
 
-	/*
 	// show image
     namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display. (original size)
     //namedWindow( "Display window", WINDOW_NORMAL );// Create a window for display. (scale down size)
     imshow( "Display window", image );                   // Show our image inside it.
-	*/
-    waitKey(0);                                          // Wait for a keystroke in the window
+
+	waitKey(0);                                          // Wait for a keystroke in the window
     return 0;
 }

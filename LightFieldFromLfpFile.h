@@ -3,6 +3,7 @@
 #include <string>
 #include <opencv2/core/core.hpp>
 #include "lightfield.h"
+#include "LfpLoader.h"
 
 using namespace std;
 using namespace cv;
@@ -17,13 +18,14 @@ using namespace cv;
 class LightFieldFromLfpFile /*:
 	public LightField*/
 {
+	LfpLoader loader;
 	Mat rawImage;
 
 	static Mat convertBayer2RGB(const Mat bayerImage);
-	static Mat rectifyLensGrid(const Mat hexagonalLensGrid);
+	static Mat rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoader metadata);
 public:
-	static const Size SPARTIAL_RESOLUTION;
-	static const Size ANGULAR_RESOLUTION;
+	Size SPARTIAL_RESOLUTION;
+	Size ANGULAR_RESOLUTION;
 
 	LightFieldFromLfpFile(void);
 	LightFieldFromLfpFile(const string& pathToFile);
@@ -32,6 +34,7 @@ public:
 	Vec3s getLuminance(const unsigned short x, const unsigned short y, const unsigned short u, const unsigned short v);
 	Mat getSubapertureImage(const unsigned short u, const unsigned short v);
 	Mat getAllSubaperturesInOneImage();
+	Mat getImage(const double focalLength);
 	Mat getRawImage();
 };
 

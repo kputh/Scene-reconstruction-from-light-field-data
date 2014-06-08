@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rapidjson/document.h"
 #include <opencv2/core/core.hpp>
 
 using namespace cv;
@@ -20,6 +21,18 @@ class LfpLoader
 	static const char IMAGE_KEY[];
 	static const char WIDTH_KEY[];
 	static const char HEIGHT_KEY[];
+
 public:
-	static Mat loadAsBayer(const string& path);
+	Mat bayerImage;
+
+	double pixelPitch;
+	double focalLength;
+	double lensPitch;
+	double rotationAngle;
+	Vec2d scaleFactor;
+	Vec3d sensorOffset;
+
+	LfpLoader(void);
+	LfpLoader(const string& pathToFile);
+	~LfpLoader(void);
 };
