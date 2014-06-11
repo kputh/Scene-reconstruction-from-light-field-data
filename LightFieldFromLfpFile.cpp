@@ -2,6 +2,7 @@
 #include <string>
 #include <cmath>
 #include <iostream>	// debug
+#include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include "LfpLoader.h"
 #include "LightFieldFromLfpFile.h"
@@ -10,6 +11,19 @@
 double round(double value)
 {
 	return (value < 0.0) ? ceil(value - 0.5) : floor(value + 0.5);;
+}
+
+
+Mat LightFieldFromLfpFile::adjustLuminanceSpace(const Mat image)
+{
+	Mat floatImage;
+	double minValue, maxValue, scaleFactor, offset;
+	minMaxLoc(image, &minValue, &maxValue);
+	scaleFactor = 1.0 / (maxValue - minValue);
+	offset = - minValue * scaleFactor;
+	image.convertTo(floatImage, CV_32F, scaleFactor, offset);
+
+	return floatImage;
 }
 
 
@@ -126,7 +140,10 @@ LightFieldFromLfpFile::LightFieldFromLfpFile(const std::string& pathToFile)
 	Mat rgbImage		= this->convertBayer2RGB(loader.bayerImage);
 	Mat rectifiedImage	= this->rectifyLensGrid(rgbImage, loader);
 
-	this->rawImage	= rectifiedImage;
+	// scale luminance space to (image) data type
+	Mat floatImage = adjustLuminanceSpace(rectifiedImage);
+
+	this->rawImage	= floatImage;
 }
 
 
@@ -136,20 +153,35 @@ LightFieldFromLfpFile::~LightFieldFromLfpFile(void)
 }
 
 
-Vec3s LightFieldFromLfpFile::getLuminance(const unsigned short x, const unsigned short y, const unsigned short u, const unsigned short v)
+Vec3f LightFieldFromLfpFile::getLuminance(const unsigned short x, const unsigned short y, const unsigned short u, const unsigned short v)
 {
 	// handle coordinates outside the recorded lightfield
 	const Point origin = Point(0, 0);
 	const Rect validSpartialCoordinates = Rect(origin, this->SPARTIAL_RESOLUTION);
-	const Rect validAngularCoordinates = Rect(origin, this->ANGULAR_RESOLUTION);
-	if (!validSpartialCoordinates.contains(Point(x, y)) ||
-		!validAngularCoordinates.contains(Point(u, v)))
-		return Vec3s(0, 0, 0);
+
+	// luminance outside the recorded spartial range is zero
+	const Vec3f zeroLuminance = Vec3f(0, 0, 0);
+	if (!validSpartialCoordinates.contains(Point(x, y)))
+		return zeroLuminance;
+
+	// luminance outside the recorded angular range is clamped to the closest valid ray
+	const Vec2d translationToOrigin = Vec2d(this->ANGULAR_RESOLUTION.width,
+		this->ANGULAR_RESOLUTION.height) * -0.5;
+	Vec2s angularVector = Vec2s(u, v);
+	angularVector += translationToOrigin;	// center value range at (0, 0)
+	double nrm = norm(angularVector);
+	const double microLensRadiusInPixels = this->loader.lensPitch / (2.0 * this->loader.pixelPitch);
+	if (nrm > microLensRadiusInPixels)
+	{
+		normalize(angularVector, angularVector, floor(microLensRadiusInPixels));
+		angularVector -= translationToOrigin;
+		return getLuminance(x, y, angularVector[0], angularVector[1]);
+	}
 
 	const unsigned int rawX = x * this->ANGULAR_RESOLUTION.width + u;
 	const unsigned int rawY = y * this->ANGULAR_RESOLUTION.height + v;
 
-	return this->rawImage.at<Vec3s>(Point(rawX, rawY));
+	return this->rawImage.at<Vec3f>(Point(rawX, rawY));
 	//TODO use getRectSubPix() instead
 }
 
@@ -161,38 +193,10 @@ Mat LightFieldFromLfpFile::getSubapertureImage(const unsigned short u, const uns
 	for (int y = 0; y < this->SPARTIAL_RESOLUTION.height; y++)
 		for (int x = 0; x < this->SPARTIAL_RESOLUTION.width; x++)
 		{
-			subapertureImage.at<Vec3s>(Point(x, y)) = this->getLuminance(x, y, u, v);
+			subapertureImage.at<Vec3f>(Point(x, y)) = this->getLuminance(x, y, u, v);
 		}
 
 	return subapertureImage;
-}
-
-
-Mat LightFieldFromLfpFile::getAllSubaperturesInOneImage()
-{
-	Mat allSAImages(this->rawImage.size(), CV_16UC3);
-
-	unsigned short x, y, u, v;
-	unsigned int newX, newY, effectiveX;
-	const unsigned int ODD_ROW_LENS_OFFSET = this->SPARTIAL_RESOLUTION.width / 2;
-	for (int rawY = 0; rawY < 3280; rawY++)
-	{
-		y = rawY / this->ANGULAR_RESOLUTION.height;
-		v = rawY % this->ANGULAR_RESOLUTION.height;
-		newY = v * this->SPARTIAL_RESOLUTION.height + y;
-
-		for (int rawX = 0; rawX < 3280; rawX++)
-		{
-			effectiveX = (y % 2 == 0) ? rawX : rawX - ODD_ROW_LENS_OFFSET;
-			x = effectiveX / this->ANGULAR_RESOLUTION.width;
-			u = effectiveX % this->ANGULAR_RESOLUTION.width;
-			newX = u * this->SPARTIAL_RESOLUTION.width + x;
-
-			allSAImages.at<Vec3s>(newX, newY) = this->rawImage.at<Vec3s>(rawX, rawY);
-		}
-	}
-
-	return allSAImages;
 }
 
 
@@ -201,17 +205,20 @@ Mat LightFieldFromLfpFile::getImage(const double focalLength)
 	const double F		= this->loader.focalLength;	// focal length of the raw image
 	const double alpha	= focalLength / F;
 
+	const Vec2f uvScale = Vec2f(1.0, 1.0 / cos(M_PI / 6.0));
+
 	const double weight = 1.0 - 1.0 / alpha;
 	const Size dilatedSize = Size(this->SPARTIAL_RESOLUTION.width * alpha,
 		this->SPARTIAL_RESOLUTION.height * alpha);
-	const Size imageSize = Size(dilatedSize.width + this->ANGULAR_RESOLUTION.width * abs(weight),
-		dilatedSize.height + this->ANGULAR_RESOLUTION.height * abs(weight));
+	const Size imageSize = Size(dilatedSize.width + this->ANGULAR_RESOLUTION.width * uvScale[0] * weight,
+		dilatedSize.height + this->ANGULAR_RESOLUTION.height * uvScale[1] * weight);
 	const int imageType = CV_MAKETYPE(CV_32F, this->rawImage.channels());
 	Mat image = Mat::zeros(imageSize, imageType);
 
 	Mat subapertureImage, resizedSAImage, dstROI;
 	Vec2d translation, dstCorner;
-	const Vec2d angularCorrection = Vec2d(this->ANGULAR_RESOLUTION.width, this->ANGULAR_RESOLUTION.height) * 0.5;
+	const Vec2d angularCorrection = Vec2d(this->ANGULAR_RESOLUTION.width,
+		this->ANGULAR_RESOLUTION.height) * 0.5;
 	const Vec2d dstCenter = Vec2d(image.size().width, image.size().height) * 0.5;
 	Rect dstRect;
 	const Vec2d fromCenterToCorner = Vec2d(dilatedSize.width, dilatedSize.height) * -0.5;
@@ -225,7 +232,7 @@ Mat LightFieldFromLfpFile::getImage(const double focalLength)
 
 			resize(subapertureImage, resizedSAImage, dilatedSize, 0, 0, interpolationMethod);
 
-			translation	= (Vec2d(u, v) - angularCorrection) * weight;
+			translation	= (Vec2d(u * uvScale[0], v * uvScale[1]) - angularCorrection) * weight;
 			dstCorner	= dstCenter + translation + fromCenterToCorner;
 			dstRect		= Rect(Point(round(dstCorner[0]), round(dstCorner[1])), dilatedSize);
 			dstROI		= Mat(image, dstRect);
@@ -236,8 +243,37 @@ Mat LightFieldFromLfpFile::getImage(const double focalLength)
 
 	//image *= 1.0 / (alpha * alpha * F * F);	// part of the formular, not required because of normalization
 
-	// adjust luminance
-	normalize(image, image, 0.0, 1.0, NORM_MINMAX);
+	// scale luminance/color values to fit inside [0, 1]
+	// better: scale by theoretical value space instead of actual values
+	image = adjustLuminanceSpace(image);
+
+	return image;
+}
+
+
+Mat LightFieldFromLfpFile::getImage(const double focalLength, const short x0, short y0)
+{
+	const double F				= this->loader.focalLength;	// focal length of the raw image
+	const double beta			= focalLength / F;
+
+	const int imageType = CV_MAKETYPE(CV_32F, this->rawImage.channels());
+	Mat image(this->SPARTIAL_RESOLUTION, imageType);
+	Vec2f pinholePosition = Vec2f(x0, y0);
+	Vec2f spartialCorrection = Vec2f(this->SPARTIAL_RESOLUTION.width, this->ANGULAR_RESOLUTION.height) * -0.5;
+	Vec2f angularCorrection = Vec2f(this->ANGULAR_RESOLUTION.width, this->ANGULAR_RESOLUTION.height) * -0.5;
+	Vec2f pixelPosition, angularCoordinates;
+
+	for (int y = 0; y < this->SPARTIAL_RESOLUTION.height; y++)
+	{
+		for (int x = 0; x < this->SPARTIAL_RESOLUTION.width; x++)
+		{
+			pixelPosition = Vec2f(x, y) + spartialCorrection;
+			angularCoordinates = ((pinholePosition - pixelPosition) / beta) + pixelPosition;
+			angularCoordinates -= angularCorrection;
+			image.at<Vec3f>(Point(x, y)) = this->getLuminance(x, y,
+				round(angularCoordinates[0]), round(angularCoordinates[1]));
+		}
+	}
 
 	return image;
 }
