@@ -30,6 +30,9 @@
     <ClCompile Include="LightFieldFromLfpFile.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="NormalDistribution.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lfpsplitter.h">
@@ -42,6 +45,9 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="LightFieldFromLfpFile.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="NormalDistribution.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

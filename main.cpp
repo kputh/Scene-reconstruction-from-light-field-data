@@ -1,6 +1,9 @@
+#define _USE_MATH_DEFINES	// for math constants in C++
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp> // ToDo remove
+#include <cmath>
+#include <string>
 #include <iostream>
 
 #include "LightFieldFromLfpFile.h"
@@ -21,6 +24,29 @@ void saveImageToPNGFile(string fileName, Mat image)
 	cout << "Image saved as file " << fileName << "." << endl;
 }
 
+void saveImageArc(LightFieldFromLfpFile lightfield, string sourceFileName, int imageCount)
+{
+	float angle, x, y;
+	float radius = 100;
+	float f = 0.0068200001716613766;
+
+	sourceFileName.erase(sourceFileName.end() - 4, sourceFileName.end());
+	sourceFileName.append("_");
+	string fileExtension = string(".png");
+	string imageFileName;
+	Mat image;
+	for (int i = 0; i < imageCount; i++)
+	{
+		angle = M_PI / 4.0 * (float) i;
+		x = cos(angle) * radius;
+		y = sin (angle) * radius;
+		image = lightfield.getImage2(f, x, y);
+		imageFileName = sourceFileName + to_string((long double)i) + fileExtension;
+		saveImageToPNGFile(imageFileName, image);
+	}
+	cout << "image arc saved" << endl;
+}
+
 int main( int argc, char** argv )
 {
     if( argc != 2)
@@ -34,16 +60,9 @@ int main( int argc, char** argv )
 		double t = (double)getTickCount();
 
 		LightFieldFromLfpFile lf(argv[1]);
-
-		rawImage = lf.getRawImage();
-		image1 = lf.getImage(0.0068200001716613766 * 1.0);
-		/*
-		image14 = lf.getImage(0.0068200001716613766 * 0.25);
-		image4 = lf.getImage(0.0068200001716613766 * 4.0);
-		*/
-
-		image1 = lf.getImage(0.0068200001716613766, -150, 0);
-		image2 = lf.getImage(0.0068200001716613766, 150, 0);
+		cout << "Loading of file at " << argv[1] << " successful." << endl;
+	
+		saveImageArc(lf, string(argv[1]), 8);
 
 		t = ((double)getTickCount() - t)/getTickFrequency();
 		cout << "Times passed in seconds: " << t << endl;
@@ -51,12 +70,6 @@ int main( int argc, char** argv )
 		cerr << e->what() << endl;
 		return -1;
 	}
-
-	cout << "Loading of file at " << argv[1] << " successful." << endl;
-
-	// save image to file
-	saveImageToPNGFile("leftImage.png", image1);
-	saveImageToPNGFile("rightImage.png", image2);
 
 	// show image
     //namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display. (original size)

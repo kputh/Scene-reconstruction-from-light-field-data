@@ -14,6 +14,7 @@ class LightField
 public:
 	LightField(void);
 	virtual ~LightField(void);
+
 	virtual cv::Scalar getLuminance(const unsigned short x, const unsigned short y, const unsigned short u, const unsigned short v) = 0;
 	virtual cv::Mat getSubapertureImage(const double u, const double v) = 0;
 	virtual cv::Mat getEpipolarImage(const double one, const double other) = 0;

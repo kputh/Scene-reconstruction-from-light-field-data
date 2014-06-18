@@ -6,6 +6,7 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include "LfpLoader.h"
 #include "LightFieldFromLfpFile.h"
+#include "NormalDistribution.h"
 
 
 double round(double value)
@@ -158,31 +159,80 @@ Vec3f LightFieldFromLfpFile::getLuminance(const unsigned short x, const unsigned
 	// handle coordinates outside the recorded lightfield
 	const Point origin = Point(0, 0);
 	const Rect validSpartialCoordinates = Rect(origin, this->SPARTIAL_RESOLUTION);
-
 	// luminance outside the recorded spartial range is zero
 	const Vec3f zeroLuminance = Vec3f(0, 0, 0);
 	if (!validSpartialCoordinates.contains(Point(x, y)))
 		return zeroLuminance;
 
 	// luminance outside the recorded angular range is clamped to the closest valid ray
-	const Vec2d translationToOrigin = Vec2d(this->ANGULAR_RESOLUTION.width,
+	const Vec2f translationToOrigin = Vec2f(this->ANGULAR_RESOLUTION.width,
 		this->ANGULAR_RESOLUTION.height) * -0.5;
-	Vec2s angularVector = Vec2s(u, v);
+	Vec2f angularVector = Vec2f(u, v);
 	angularVector += translationToOrigin;	// center value range at (0, 0)
 	double nrm = norm(angularVector);
 	const double microLensRadiusInPixels = this->loader.lensPitch / (2.0 * this->loader.pixelPitch);
 	if (nrm > microLensRadiusInPixels)
 	{
-		normalize(angularVector, angularVector, floor(microLensRadiusInPixels));
+		//angularVector /= nrm * microLensRadiusInPixels;
+		normalize(angularVector, angularVector, microLensRadiusInPixels);
 		angularVector -= translationToOrigin;
 		return getLuminance(x, y, angularVector[0], angularVector[1]);
 	}
 
+	/*
 	const unsigned int rawX = x * this->ANGULAR_RESOLUTION.width + u;
 	const unsigned int rawY = y * this->ANGULAR_RESOLUTION.height + v;
 
 	return this->rawImage.at<Vec3f>(Point(rawX, rawY));
-	//TODO use getRectSubPix() instead
+	*/
+
+	Mat singlePixel;
+	Size singlePixelSize = Size(1, 1);
+	Point2f center = Point2f(x * this->ANGULAR_RESOLUTION.width + u,
+		y * this->ANGULAR_RESOLUTION.height + v);
+	getRectSubPix(rawImage, singlePixelSize, center, singlePixel);
+	return singlePixel.at<Vec3f>(origin);
+}
+
+
+Vec3f LightFieldFromLfpFile::getLuminance(float x, float y, float u, float v)
+{
+	// handle coordinates outside the recorded lightfield
+	const float halfWidth = this->SPARTIAL_RESOLUTION.width / 2.0;
+	const float halfHeight = this->SPARTIAL_RESOLUTION.height / 2.0;
+	// luminance outside the recorded spartial range is zero
+	const Vec3f zeroLuminance = Vec3f(0, 0, 0);
+	if (abs(x) > halfWidth || abs(y) > halfHeight)
+		return zeroLuminance;
+
+	// luminance outside the recorded angular range is clamped to the closest valid ray
+	Vec2f angularVector = Vec2f(u, v);
+	double nrm = norm(angularVector);
+	const double microLensRadiusInPixels = this->loader.lensPitch / (2.0 * this->loader.pixelPitch);
+	if (nrm > microLensRadiusInPixels)
+	{
+		//angularVector /= nrm * microLensRadiusInPixels;
+		normalize(angularVector, angularVector, microLensRadiusInPixels);
+		return getLuminance(x, y, angularVector[0], angularVector[1]);
+	}
+
+	/*
+	const unsigned int rawX = x * this->ANGULAR_RESOLUTION.width + u;
+	const unsigned int rawY = y * this->ANGULAR_RESOLUTION.height + v;
+
+	return this->rawImage.at<Vec3f>(Point(rawX, rawY));
+	*/
+
+	Mat singlePixel;
+	Size singlePixelSize = Size(1, 1);
+	Vec2f lensSize = Vec2f(this->ANGULAR_RESOLUTION.width, this->ANGULAR_RESOLUTION.height);
+	Vec2f centralLensCenter = Vec2f(this->SPARTIAL_RESOLUTION.width, this->SPARTIAL_RESOLUTION.height) / 2.0; // muss eigentlich auf ein Vielfaches der Linsengröße gerundet werden
+	Vec2f lensCenter = centralLensCenter + Vec2f(x, y).mul(lensSize);
+	lensCenter = Vec2f(round(lensCenter[0]), round(lensCenter[1]));
+	Vec2f position = lensCenter + angularVector;
+	getRectSubPix(rawImage, singlePixelSize, Point2f(position), singlePixel);
+
+	return singlePixel.at<Vec3f>(Point(0, 0));
 }
 
 
@@ -274,6 +324,64 @@ Mat LightFieldFromLfpFile::getImage(const double focalLength, const short x0, sh
 				round(angularCoordinates[0]), round(angularCoordinates[1]));
 		}
 	}
+
+	return image;
+}
+
+
+Mat LightFieldFromLfpFile::getImage2(const double focalLength, const short x0, short y0)
+{
+	float standardDeviation1 = this->ANGULAR_RESOLUTION.width / 2.0;
+	float standardDeviation2 = this->ANGULAR_RESOLUTION.height / 2.0;
+	NormalDistribution apertureFunction = NormalDistribution(x0, y0, standardDeviation1, standardDeviation2);
+
+	const double F		= this->loader.focalLength;	// focal length of the raw image
+	const double alpha	= focalLength / F;
+
+	const Vec2f uvScale = Vec2f(1.0, 1.0 / cos(M_PI / 6.0));
+
+	const double weight = 1.0 - 1.0 / alpha;
+	const Size dilatedSize = Size(this->SPARTIAL_RESOLUTION.width * alpha,
+		this->SPARTIAL_RESOLUTION.height * alpha);
+	const Size imageSize = Size(dilatedSize.width + this->ANGULAR_RESOLUTION.width * uvScale[0] * weight,
+		dilatedSize.height + this->ANGULAR_RESOLUTION.height * uvScale[1] * weight);
+	const int imageType = CV_MAKETYPE(CV_32F, this->rawImage.channels());
+	Mat image = Mat::zeros(imageSize, imageType);
+
+	Mat subapertureImage, resizedSAImage, dstROI;
+	Vec2d translation, dstCorner;
+	const Vec2d angularCorrection = Vec2d(this->ANGULAR_RESOLUTION.width,
+		this->ANGULAR_RESOLUTION.height) * 0.5;
+	const Vec2d dstCenter = Vec2d(image.size().width, image.size().height) * 0.5;
+	Rect dstRect;
+	const Vec2d fromCenterToCorner = Vec2d(dilatedSize.width, dilatedSize.height) * -0.5;
+	const int interpolationMethod = (alpha < 0.0) ? CV_INTER_AREA : CV_INTER_CUBIC;
+
+	for(int u = 0; u < this->ANGULAR_RESOLUTION.width; u++)
+	{
+		for(int v = 0; v < this->ANGULAR_RESOLUTION.height; v++)
+		{
+			subapertureImage = this->getSubapertureImage(u, v);
+
+			resize(subapertureImage, resizedSAImage, dilatedSize, 0, 0, interpolationMethod);
+
+			resizedSAImage *= apertureFunction.f(u * uvScale[0] - angularCorrection[0],
+				v * uvScale[1] - angularCorrection[1]);
+
+			translation	= (Vec2d(u * uvScale[0], v * uvScale[1]) - angularCorrection) * weight;
+			dstCorner	= dstCenter + translation + fromCenterToCorner;
+			dstRect		= Rect(Point(round(dstCorner[0]), round(dstCorner[1])), dilatedSize);
+			dstROI		= Mat(image, dstRect);
+
+			add(resizedSAImage, dstROI, dstROI, noArray(), dstROI.type());
+		}
+	}
+
+	//image *= 1.0 / (alpha * alpha * F * F);	// part of the formular, not required because of normalization
+
+	// scale luminance/color values to fit inside [0, 1]
+	// better: scale by theoretical value space instead of actual values
+	image = adjustLuminanceSpace(image);
 
 	return image;
 }

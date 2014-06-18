@@ -33,9 +33,11 @@ public:
 	~LightFieldFromLfpFile(void);
 
 	Vec3f getLuminance(const unsigned short x, const unsigned short y, const unsigned short u, const unsigned short v);
+	Vec3f getLuminance(float x, float y, float u, float v);
 	Mat getSubapertureImage(const unsigned short u, const unsigned short v);
 	Mat getImage(const double focalLength);
 	Mat getImage(const double focalLength, const short x0, short y0);
+	Mat getImage2(const double focalLength, const short x0, short y0);
 	Mat getRawImage();
 };
 
