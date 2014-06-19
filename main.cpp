@@ -40,7 +40,7 @@ void saveImageArc(LightFieldFromLfpFile lightfield, string sourceFileName, int i
 		angle = M_PI / 4.0 * (float) i;
 		x = cos(angle) * radius;
 		y = sin (angle) * radius;
-		image = lightfield.getImage2(f, x, y);
+		image = lightfield.getImage(f, x, y);
 		imageFileName = sourceFileName + to_string((long double)i) + fileExtension;
 		saveImageToPNGFile(imageFileName, image);
 	}
@@ -62,7 +62,8 @@ int main( int argc, char** argv )
 		LightFieldFromLfpFile lf(argv[1]);
 		cout << "Loading of file at " << argv[1] << " successful." << endl;
 	
-		saveImageArc(lf, string(argv[1]), 8);
+		//saveImageArc(lf, string(argv[1]), 8);
+		image1 = lf.getImage(0.0068200001716613766);
 
 		t = ((double)getTickCount() - t)/getTickFrequency();
 		cout << "Times passed in seconds: " << t << endl;
@@ -71,6 +72,8 @@ int main( int argc, char** argv )
 		return -1;
 	}
 
+	saveImageToPNGFile(string(argv[1]) + string(".png"), image1);
+	cin.ignore();
 	// show image
     //namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display. (original size)
     

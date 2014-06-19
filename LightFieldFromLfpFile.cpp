@@ -11,7 +11,19 @@
 
 double round(double value)
 {
-	return (value < 0.0) ? ceil(value - 0.5) : floor(value + 0.5);;
+	return (value < 0.0) ? ceil(value - 0.5) : floor(value + 0.5);
+}
+
+
+double roundTo(double value, double target)
+{
+	return (value < target) ? ceil(value) : floor(value);
+}
+
+
+double roundToZero(double value)
+{
+	return (value < 0.0) ? ceil(value) : floor(value);
 }
 
 
@@ -145,6 +157,19 @@ LightFieldFromLfpFile::LightFieldFromLfpFile(const std::string& pathToFile)
 	Mat floatImage = adjustLuminanceSpace(rectifiedImage);
 
 	this->rawImage	= floatImage;
+
+	// generate all sub-aperture images
+	size_t saImageCount = this->ANGULAR_RESOLUTION.width * this->ANGULAR_RESOLUTION.height;
+	this->subapertureImages = vector<Mat>(saImageCount);
+	int index = 0;
+	for (int v = 0; v < this->ANGULAR_RESOLUTION.height; v++)
+	{
+		for (int u = 0; u < this->ANGULAR_RESOLUTION.width; u++)
+		{
+			this->subapertureImages[index] = this->generateSubapertureImage(u, v);
+			index++;
+		}
+	}
 }
 
 
@@ -154,7 +179,7 @@ LightFieldFromLfpFile::~LightFieldFromLfpFile(void)
 }
 
 
-Vec3f LightFieldFromLfpFile::getLuminance(const unsigned short x, const unsigned short y, const unsigned short u, const unsigned short v)
+Vec3f LightFieldFromLfpFile::getLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v)
 {
 	// handle coordinates outside the recorded lightfield
 	const Point origin = Point(0, 0);
@@ -173,21 +198,47 @@ Vec3f LightFieldFromLfpFile::getLuminance(const unsigned short x, const unsigned
 	const double microLensRadiusInPixels = this->loader.lensPitch / (2.0 * this->loader.pixelPitch);
 	if (nrm > microLensRadiusInPixels)
 	{
-		//angularVector /= nrm * microLensRadiusInPixels;
-		normalize(angularVector, angularVector, microLensRadiusInPixels);
+		angularVector *= microLensRadiusInPixels / nrm;
+		angularVector[0] = roundToZero(angularVector[0]);
+		angularVector[1] = roundToZero(angularVector[1]);
 		angularVector -= translationToOrigin;
-		return getLuminance(x, y, angularVector[0], angularVector[1]);
+		u = angularVector[0];
+		v = angularVector[1];
 	}
 
-	/*
-	const unsigned int rawX = x * this->ANGULAR_RESOLUTION.width + u;
-	const unsigned int rawY = y * this->ANGULAR_RESOLUTION.height + v;
+	Point pixelPosition = Point(x * this->ANGULAR_RESOLUTION.width + u,
+		y * this->ANGULAR_RESOLUTION.height + v);
+	return rawImage.at<Vec3f>(pixelPosition);
+}
 
-	return this->rawImage.at<Vec3f>(Point(rawX, rawY));
-	*/
+
+Vec3f LightFieldFromLfpFile::getSubpixelLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v)
+{
+	// handle coordinates outside the recorded lightfield
+	const Point origin = Point(0, 0);
+	const Rect validSpartialCoordinates = Rect(origin, this->SPARTIAL_RESOLUTION);
+	// luminance outside the recorded spartial range is zero
+	const Vec3f zeroLuminance = Vec3f(0, 0, 0);
+	if (!validSpartialCoordinates.contains(Point(x, y)))
+		return zeroLuminance;
+
+	// luminance outside the recorded angular range is clamped to the closest valid ray
+	const Vec2f translationToOrigin = Vec2f(this->ANGULAR_RESOLUTION.width,
+		this->ANGULAR_RESOLUTION.height) * -0.5;
+	Vec2f angularVector = Vec2f(u, v);
+	angularVector += translationToOrigin;	// center value range at (0, 0)
+	double nrm = norm(angularVector);
+	const double microLensRadiusInPixels = this->loader.lensPitch / (2.0 * this->loader.pixelPitch);
+	if (nrm > microLensRadiusInPixels)
+	{
+		angularVector *= microLensRadiusInPixels / nrm;
+		angularVector -= translationToOrigin;
+		u = angularVector[0];
+		v = angularVector[1];
+	}
 
 	Mat singlePixel;
-	Size singlePixelSize = Size(1, 1);
+	const Size singlePixelSize = Size(1, 1);
 	Point2f center = Point2f(x * this->ANGULAR_RESOLUTION.width + u,
 		y * this->ANGULAR_RESOLUTION.height + v);
 	getRectSubPix(rawImage, singlePixelSize, center, singlePixel);
@@ -195,7 +246,7 @@ Vec3f LightFieldFromLfpFile::getLuminance(const unsigned short x, const unsigned
 }
 
 
-Vec3f LightFieldFromLfpFile::getLuminance(float x, float y, float u, float v)
+Vec3f LightFieldFromLfpFile::getLuminanceF(float x, float y, float u, float v)
 {
 	// handle coordinates outside the recorded lightfield
 	const float halfWidth = this->SPARTIAL_RESOLUTION.width / 2.0;
@@ -211,7 +262,7 @@ Vec3f LightFieldFromLfpFile::getLuminance(float x, float y, float u, float v)
 	const double microLensRadiusInPixels = this->loader.lensPitch / (2.0 * this->loader.pixelPitch);
 	if (nrm > microLensRadiusInPixels)
 	{
-		//angularVector /= nrm * microLensRadiusInPixels;
+		//angularVector *= microLensRadiusInPixels / nrm;
 		normalize(angularVector, angularVector, microLensRadiusInPixels);
 		return getLuminance(x, y, angularVector[0], angularVector[1]);
 	}
@@ -224,7 +275,7 @@ Vec3f LightFieldFromLfpFile::getLuminance(float x, float y, float u, float v)
 	*/
 
 	Mat singlePixel;
-	Size singlePixelSize = Size(1, 1);
+	const Size singlePixelSize = Size(1, 1);
 	Vec2f lensSize = Vec2f(this->ANGULAR_RESOLUTION.width, this->ANGULAR_RESOLUTION.height);
 	Vec2f centralLensCenter = Vec2f(this->SPARTIAL_RESOLUTION.width, this->SPARTIAL_RESOLUTION.height) / 2.0; // muss eigentlich auf ein Vielfaches der Linsengröße gerundet werden
 	Vec2f lensCenter = centralLensCenter + Vec2f(x, y).mul(lensSize);
@@ -236,7 +287,7 @@ Vec3f LightFieldFromLfpFile::getLuminance(float x, float y, float u, float v)
 }
 
 
-Mat LightFieldFromLfpFile::getSubapertureImage(const unsigned short u, const unsigned short v)
+Mat LightFieldFromLfpFile::generateSubapertureImage(const unsigned short u, const unsigned short v)
 {
 	Mat subapertureImage(this->SPARTIAL_RESOLUTION, this->rawImage.type());
 
@@ -247,6 +298,12 @@ Mat LightFieldFromLfpFile::getSubapertureImage(const unsigned short u, const uns
 		}
 
 	return subapertureImage;
+}
+
+
+Mat LightFieldFromLfpFile::getSubapertureImage(const unsigned short u, const unsigned short v)
+{
+	return this->subapertureImages[v * this->ANGULAR_RESOLUTION.width + u];
 }
 
 
