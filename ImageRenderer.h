@@ -31,6 +31,6 @@ public:
 	Vec2i getPinholePosition();
 	void setPinholePosition(Vec2i pinholePosition);
 
-	virtual Mat getImage() =0;
+	virtual Mat renderImage() =0;
 };
 

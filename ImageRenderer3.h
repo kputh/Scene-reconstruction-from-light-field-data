@@ -24,5 +24,5 @@ public:
 	ImageRenderer3(void);
 	~ImageRenderer3(void);
 
-	Mat getImage();
+	Mat renderImage();
 };

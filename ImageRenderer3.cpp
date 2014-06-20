@@ -16,7 +16,7 @@ ImageRenderer3::~ImageRenderer3(void)
 }
 
 
-Mat ImageRenderer3::getImage()
+Mat ImageRenderer3::renderImage()
 {
 	int x0 = this->getPinholePosition()[0]; // TODO kann außerhalb des ML-Bilds liegen
 	int y0 = this->getPinholePosition()[1];

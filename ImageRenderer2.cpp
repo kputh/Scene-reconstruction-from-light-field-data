@@ -12,7 +12,7 @@ ImageRenderer2::~ImageRenderer2(void)
 }
 
 
-Mat ImageRenderer2::getImage()
+Mat ImageRenderer2::renderImage()
 {
 	const double F		= this->lightfield.getRawFocalLength();	// focal length of the raw image
 	const double beta	= focalLength / F;

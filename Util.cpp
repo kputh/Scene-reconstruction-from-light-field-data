@@ -70,7 +70,7 @@ void saveImageArc(LightFieldFromLfpFile lightfield, string sourceFileName, int i
 		x = cos(angle) * radius;
 		y = sin (angle) * radius;
 		renderer.setPinholePosition(Vec2i(round(x), round(y)));
-		image = renderer.getImage();
+		image = renderer.renderImage();
 		//image = lightfield.getImage(f, x, y);
 		imageFileName = sourceFileName + to_string((long double)i) + fileExtension;
 		saveImageToPNGFile(imageFileName, image);

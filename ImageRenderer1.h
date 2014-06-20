@@ -20,6 +20,6 @@ public:
 	ImageRenderer1(void);
 	~ImageRenderer1(void);
 
-	Mat getImage();
+	Mat renderImage();
 };
 
