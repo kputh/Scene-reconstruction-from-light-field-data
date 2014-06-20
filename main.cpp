@@ -6,46 +6,15 @@
 #include <string>
 #include <iostream>
 
+#include "Util.h"
 #include "LightFieldFromLfpFile.h"
+#include "ImageRenderer.h"
+#include "ImageRenderer1.h"
+#include "ImageRenderer2.h"
+#include "ImageRenderer3.h"
 
 using namespace cv;
 using namespace std;
-
-void saveImageToPNGFile(string fileName, Mat image)
-{
-	const double maxValue16bit = 65535;
-	double minValue, maxValue, scaleFactor;
-	minMaxLoc(image, &minValue, &maxValue);
-	scaleFactor = maxValue16bit / (maxValue - minValue);
-	Mat writableMat;
-	image.convertTo(writableMat, CV_16U, scaleFactor, -minValue * scaleFactor);
-
-	imwrite(fileName, writableMat);
-	cout << "Image saved as file " << fileName << "." << endl;
-}
-
-void saveImageArc(LightFieldFromLfpFile lightfield, string sourceFileName, int imageCount)
-{
-	float angle, x, y;
-	float radius = 100;
-	float f = 0.0068200001716613766;
-
-	sourceFileName.erase(sourceFileName.end() - 4, sourceFileName.end());
-	sourceFileName.append("_");
-	string fileExtension = string(".png");
-	string imageFileName;
-	Mat image;
-	for (int i = 0; i < imageCount; i++)
-	{
-		angle = M_PI / 4.0 * (float) i;
-		x = cos(angle) * radius;
-		y = sin (angle) * radius;
-		image = lightfield.getImage(f, x, y);
-		imageFileName = sourceFileName + to_string((long double)i) + fileExtension;
-		saveImageToPNGFile(imageFileName, image);
-	}
-	cout << "image arc saved" << endl;
-}
 
 int main( int argc, char** argv )
 {
@@ -62,8 +31,13 @@ int main( int argc, char** argv )
 		LightFieldFromLfpFile lf(argv[1]);
 		cout << "Loading of file at " << argv[1] << " successful." << endl;
 	
-		//saveImageArc(lf, string(argv[1]), 8);
-		image1 = lf.getImage(0.0068200001716613766);
+		saveImageArc(lf, string(argv[1]), 8);
+		/*
+		ImageRenderer1 renderer = ImageRenderer1();
+		renderer.setLightfield(lf);
+		renderer.setFocalLength(0.0068200001716613766);
+		image1 = renderer.getImage();
+		*/
 
 		t = ((double)getTickCount() - t)/getTickFrequency();
 		cout << "Times passed in seconds: " << t << endl;
@@ -72,8 +46,8 @@ int main( int argc, char** argv )
 		return -1;
 	}
 
-	saveImageToPNGFile(string(argv[1]) + string(".png"), image1);
-	cin.ignore();
+	//saveImageToPNGFile(string(argv[1]) + string(".png"), image1);
+	//cin.ignore();
 	// show image
     //namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display. (original size)
     

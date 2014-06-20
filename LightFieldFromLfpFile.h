@@ -24,7 +24,6 @@ class LightFieldFromLfpFile /*:
 
 	static Mat convertBayer2RGB(const Mat bayerImage);
 	static Mat rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoader metadata);
-	static Mat LightFieldFromLfpFile::adjustLuminanceSpace(const Mat image);
 	Mat generateSubapertureImage(const unsigned short u, const unsigned short v);
 public:
 	Size SPARTIAL_RESOLUTION;
@@ -38,9 +37,8 @@ public:
 	Vec3f getSubpixelLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v);
 	Vec3f getLuminanceF(float x, float y, float u, float v);
 	Mat getSubapertureImage(const unsigned short u, const unsigned short v);
-	Mat getImage(const double focalLength);
-	Mat getImage(const double focalLength, const short x0, short y0);
-	Mat getImage2(const double focalLength, const short x0, short y0);
 	Mat getRawImage();
+
+	double getRawFocalLength();
 };
 

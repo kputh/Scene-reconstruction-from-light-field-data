@@ -4,40 +4,9 @@
 #include <iostream>	// debug
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include "Util.h"
 #include "LfpLoader.h"
 #include "LightFieldFromLfpFile.h"
-#include "NormalDistribution.h"
-
-
-double round(double value)
-{
-	return (value < 0.0) ? ceil(value - 0.5) : floor(value + 0.5);
-}
-
-
-double roundTo(double value, double target)
-{
-	return (value < target) ? ceil(value) : floor(value);
-}
-
-
-double roundToZero(double value)
-{
-	return (value < 0.0) ? ceil(value) : floor(value);
-}
-
-
-Mat LightFieldFromLfpFile::adjustLuminanceSpace(const Mat image)
-{
-	Mat floatImage;
-	double minValue, maxValue, scaleFactor, offset;
-	minMaxLoc(image, &minValue, &maxValue);
-	scaleFactor = 1.0 / (maxValue - minValue);
-	offset = - minValue * scaleFactor;
-	image.convertTo(floatImage, CV_32F, scaleFactor, offset);
-
-	return floatImage;
-}
 
 
 Mat LightFieldFromLfpFile::convertBayer2RGB(const Mat bayerImage)
@@ -307,144 +276,13 @@ Mat LightFieldFromLfpFile::getSubapertureImage(const unsigned short u, const uns
 }
 
 
-Mat LightFieldFromLfpFile::getImage(const double focalLength)
-{
-	const double F		= this->loader.focalLength;	// focal length of the raw image
-	const double alpha	= focalLength / F;
-
-	const Vec2f uvScale = Vec2f(1.0, 1.0 / cos(M_PI / 6.0));
-
-	const double weight = 1.0 - 1.0 / alpha;
-	const Size dilatedSize = Size(this->SPARTIAL_RESOLUTION.width * alpha,
-		this->SPARTIAL_RESOLUTION.height * alpha);
-	const Size imageSize = Size(dilatedSize.width + this->ANGULAR_RESOLUTION.width * uvScale[0] * weight,
-		dilatedSize.height + this->ANGULAR_RESOLUTION.height * uvScale[1] * weight);
-	const int imageType = CV_MAKETYPE(CV_32F, this->rawImage.channels());
-	Mat image = Mat::zeros(imageSize, imageType);
-
-	Mat subapertureImage, resizedSAImage, dstROI;
-	Vec2d translation, dstCorner;
-	const Vec2d angularCorrection = Vec2d(this->ANGULAR_RESOLUTION.width,
-		this->ANGULAR_RESOLUTION.height) * 0.5;
-	const Vec2d dstCenter = Vec2d(image.size().width, image.size().height) * 0.5;
-	Rect dstRect;
-	const Vec2d fromCenterToCorner = Vec2d(dilatedSize.width, dilatedSize.height) * -0.5;
-	const int interpolationMethod = (alpha < 0.0) ? CV_INTER_AREA : CV_INTER_CUBIC;
-
-	for(int u = 0; u < this->ANGULAR_RESOLUTION.width; u++)
-	{
-		for(int v = 0; v < this->ANGULAR_RESOLUTION.height; v++)
-		{
-			subapertureImage = this->getSubapertureImage(u, v);
-
-			resize(subapertureImage, resizedSAImage, dilatedSize, 0, 0, interpolationMethod);
-
-			translation	= (Vec2d(u * uvScale[0], v * uvScale[1]) - angularCorrection) * weight;
-			dstCorner	= dstCenter + translation + fromCenterToCorner;
-			dstRect		= Rect(Point(round(dstCorner[0]), round(dstCorner[1])), dilatedSize);
-			dstROI		= Mat(image, dstRect);
-
-			add(resizedSAImage, dstROI, dstROI, noArray(), dstROI.type());
-		}
-	}
-
-	//image *= 1.0 / (alpha * alpha * F * F);	// part of the formular, not required because of normalization
-
-	// scale luminance/color values to fit inside [0, 1]
-	// better: scale by theoretical value space instead of actual values
-	image = adjustLuminanceSpace(image);
-
-	return image;
-}
-
-
-Mat LightFieldFromLfpFile::getImage(const double focalLength, const short x0, short y0)
-{
-	const double F				= this->loader.focalLength;	// focal length of the raw image
-	const double beta			= focalLength / F;
-
-	const int imageType = CV_MAKETYPE(CV_32F, this->rawImage.channels());
-	Mat image(this->SPARTIAL_RESOLUTION, imageType);
-	Vec2f pinholePosition = Vec2f(x0, y0);
-	Vec2f spartialCorrection = Vec2f(this->SPARTIAL_RESOLUTION.width, this->ANGULAR_RESOLUTION.height) * -0.5;
-	Vec2f angularCorrection = Vec2f(this->ANGULAR_RESOLUTION.width, this->ANGULAR_RESOLUTION.height) * -0.5;
-	Vec2f pixelPosition, angularCoordinates;
-
-	for (int y = 0; y < this->SPARTIAL_RESOLUTION.height; y++)
-	{
-		for (int x = 0; x < this->SPARTIAL_RESOLUTION.width; x++)
-		{
-			pixelPosition = Vec2f(x, y) + spartialCorrection;
-			angularCoordinates = ((pinholePosition - pixelPosition) / beta) + pixelPosition;
-			angularCoordinates -= angularCorrection;
-			image.at<Vec3f>(Point(x, y)) = this->getLuminance(x, y,
-				round(angularCoordinates[0]), round(angularCoordinates[1]));
-		}
-	}
-
-	return image;
-}
-
-
-Mat LightFieldFromLfpFile::getImage2(const double focalLength, const short x0, short y0)
-{
-	float standardDeviation1 = this->ANGULAR_RESOLUTION.width / 2.0;
-	float standardDeviation2 = this->ANGULAR_RESOLUTION.height / 2.0;
-	NormalDistribution apertureFunction = NormalDistribution(x0, y0, standardDeviation1, standardDeviation2);
-
-	const double F		= this->loader.focalLength;	// focal length of the raw image
-	const double alpha	= focalLength / F;
-
-	const Vec2f uvScale = Vec2f(1.0, 1.0 / cos(M_PI / 6.0));
-
-	const double weight = 1.0 - 1.0 / alpha;
-	const Size dilatedSize = Size(this->SPARTIAL_RESOLUTION.width * alpha,
-		this->SPARTIAL_RESOLUTION.height * alpha);
-	const Size imageSize = Size(dilatedSize.width + this->ANGULAR_RESOLUTION.width * uvScale[0] * weight,
-		dilatedSize.height + this->ANGULAR_RESOLUTION.height * uvScale[1] * weight);
-	const int imageType = CV_MAKETYPE(CV_32F, this->rawImage.channels());
-	Mat image = Mat::zeros(imageSize, imageType);
-
-	Mat subapertureImage, resizedSAImage, dstROI;
-	Vec2d translation, dstCorner;
-	const Vec2d angularCorrection = Vec2d(this->ANGULAR_RESOLUTION.width,
-		this->ANGULAR_RESOLUTION.height) * 0.5;
-	const Vec2d dstCenter = Vec2d(image.size().width, image.size().height) * 0.5;
-	Rect dstRect;
-	const Vec2d fromCenterToCorner = Vec2d(dilatedSize.width, dilatedSize.height) * -0.5;
-	const int interpolationMethod = (alpha < 0.0) ? CV_INTER_AREA : CV_INTER_CUBIC;
-
-	for(int u = 0; u < this->ANGULAR_RESOLUTION.width; u++)
-	{
-		for(int v = 0; v < this->ANGULAR_RESOLUTION.height; v++)
-		{
-			subapertureImage = this->getSubapertureImage(u, v);
-
-			resize(subapertureImage, resizedSAImage, dilatedSize, 0, 0, interpolationMethod);
-
-			resizedSAImage *= apertureFunction.f(u * uvScale[0] - angularCorrection[0],
-				v * uvScale[1] - angularCorrection[1]);
-
-			translation	= (Vec2d(u * uvScale[0], v * uvScale[1]) - angularCorrection) * weight;
-			dstCorner	= dstCenter + translation + fromCenterToCorner;
-			dstRect		= Rect(Point(round(dstCorner[0]), round(dstCorner[1])), dilatedSize);
-			dstROI		= Mat(image, dstRect);
-
-			add(resizedSAImage, dstROI, dstROI, noArray(), dstROI.type());
-		}
-	}
-
-	//image *= 1.0 / (alpha * alpha * F * F);	// part of the formular, not required because of normalization
-
-	// scale luminance/color values to fit inside [0, 1]
-	// better: scale by theoretical value space instead of actual values
-	image = adjustLuminanceSpace(image);
-
-	return image;
-}
-
-
 Mat LightFieldFromLfpFile::getRawImage()
 {
 	return this->rawImage;
+}
+
+
+double LightFieldFromLfpFile::getRawFocalLength()
+{
+	return this->loader.focalLength;
 }
