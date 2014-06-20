@@ -52,7 +52,7 @@ void saveImageToPNGFile(string fileName, Mat image)
 void saveImageArc(LightFieldFromLfpFile lightfield, string sourceFileName, int imageCount)
 {
 	float angle, x, y;
-	float radius = 100;
+	float radius = 4;
 	float f = 0.0068200001716613766;
 
 	ImageRenderer3 renderer = ImageRenderer3();

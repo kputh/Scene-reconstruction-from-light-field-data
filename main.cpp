@@ -47,7 +47,7 @@ int main( int argc, char** argv )
 	}
 
 	//saveImageToPNGFile(string(argv[1]) + string(".png"), image1);
-	//cin.ignore();
+	cin.ignore();
 	// show image
     //namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display. (original size)
     

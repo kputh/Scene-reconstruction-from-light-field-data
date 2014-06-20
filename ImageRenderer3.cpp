@@ -47,7 +47,6 @@ Mat ImageRenderer3::renderImage()
 	const Vec2d fromCenterToCorner = Vec2d(dilatedSize.width, dilatedSize.height) * -0.5;
 	const int interpolationMethod = (alpha < 0.0) ? CV_INTER_AREA : CV_INTER_CUBIC;
 
-	float w;
 	for(int u = 0; u < this->lightfield.ANGULAR_RESOLUTION.width; u++)
 	{
 		for(int v = 0; v < this->lightfield.ANGULAR_RESOLUTION.height; v++)
@@ -56,9 +55,8 @@ Mat ImageRenderer3::renderImage()
 
 			resize(subapertureImage, resizedSAImage, dilatedSize, 0, 0, interpolationMethod);
 
-			w = apertureFunction.f(u * uvScale[0] - angularCorrection[0],
+			resizedSAImage *= apertureFunction.f(u * uvScale[0] - angularCorrection[0],
 				v * uvScale[1] - angularCorrection[1]);
-			resizedSAImage *= w;
 
 			translation	= (Vec2d(u * uvScale[0], v * uvScale[1]) - angularCorrection) * weight;
 			dstCorner	= dstCenter + translation + fromCenterToCorner;
