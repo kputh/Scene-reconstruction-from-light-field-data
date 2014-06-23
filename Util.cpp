@@ -52,7 +52,7 @@ void saveImageToPNGFile(string fileName, Mat image)
 void saveImageArc(LightFieldFromLfpFile lightfield, string sourceFileName, int imageCount)
 {
 	float angle, x, y;
-	float radius = 4;
+	float radius = 6;// Streifen sichtbar bei 3+
 	float f = 0.0068200001716613766;
 
 	ImageRenderer3 renderer = ImageRenderer3();
@@ -76,4 +76,38 @@ void saveImageArc(LightFieldFromLfpFile lightfield, string sourceFileName, int i
 		saveImageToPNGFile(imageFileName, image);
 	}
 	cout << "image arc saved" << endl;
+}
+
+
+Mat appendRayCountingChannel(Mat image)
+{
+	int compositeImageType = CV_MAKETYPE(image.depth(), image.channels() + 1);
+	int counterImageType = CV_MAKETYPE(image.depth(), 1);
+	Scalar defaultCount = Scalar(1);
+	Mat rayCount = Mat(image.size(), counterImageType, defaultCount);
+	Mat compositeImage = Mat(image.size(), compositeImageType);
+
+	Mat in[] = { image, rayCount };
+	Mat out[] = { compositeImage };
+	int from_to[] = { 0,0, 1,1, 2,2, 3,3 };
+	mixChannels( in, 2, out, 1, from_to, 4);
+
+	return compositeImage;
+}
+
+
+Mat normalizeByRayCount(Mat image)
+{
+	int imageType = CV_MAKETYPE(image.depth(), image.channels() - 1);
+	Mat rayCount = Mat(image.size(), imageType);
+	Mat normalizedImage = Mat(image.size(), imageType);
+
+	Mat in[] = { image };
+	Mat out[] = { normalizedImage, rayCount };
+	int from_to[] = { 0,0, 1,1, 2,2, 3,3, 3,4, 3,5 };
+	mixChannels( in, 1, out, 2, from_to, 6);
+
+	divide(normalizedImage, rayCount, normalizedImage);
+
+	return normalizedImage;
 }

@@ -11,3 +11,5 @@ double roundToZero(double value);
 Mat adjustLuminanceSpace(const Mat image);
 void saveImageToPNGFile(string fileName, Mat image);
 void saveImageArc(LightFieldFromLfpFile lightfield, string sourceFileName, int imageCount);
+Mat appendRayCountingChannel(Mat image);
+Mat normalizeByRayCount(Mat image);
