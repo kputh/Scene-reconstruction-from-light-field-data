@@ -83,8 +83,7 @@ Mat appendRayCountingChannel(Mat image)
 {
 	int compositeImageType = CV_MAKETYPE(image.depth(), image.channels() + 1);
 	int counterImageType = CV_MAKETYPE(image.depth(), 1);
-	Scalar defaultCount = Scalar(1);
-	Mat rayCount = Mat(image.size(), counterImageType, defaultCount);
+	Mat rayCount = Mat::ones(image.size(), counterImageType);
 	Mat compositeImage = Mat(image.size(), compositeImageType);
 
 	Mat in[] = { image, rayCount };

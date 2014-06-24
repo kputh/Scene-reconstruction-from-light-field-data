@@ -9,6 +9,9 @@
 #include "LightFieldFromLfpFile.h"
 
 
+const int LightFieldFromLfpFile::IMAGE_TYPE = CV_32FC3;
+
+
 Mat LightFieldFromLfpFile::convertBayer2RGB(const Mat bayerImage)
 {
 	Mat colorImage(bayerImage.size(), CV_16UC3);
@@ -19,6 +22,9 @@ Mat LightFieldFromLfpFile::convertBayer2RGB(const Mat bayerImage)
 
 Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoader metadata)
 {
+	Mat inputImage;
+	hexagonalLensGrid.convertTo(inputImage, LightFieldFromLfpFile::IMAGE_TYPE);
+
 	// 1) read LFP metadata
 	const double pixelPitch		= metadata.pixelPitch;
 	const double lensPitch		= metadata.lensPitch;
@@ -49,7 +55,7 @@ Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoade
 	circle(lensMask, lensCenter, lensRadius, circleColor, CV_FILLED);
 
 	// 4) copy each lens' image from the hexagonal grid to the rectilinear grid
-	Mat rectifiedLensGrid			= Mat::zeros(rectifiedSize, hexagonalLensGrid.type());
+	Mat rectifiedLensGrid			= Mat::zeros(rectifiedSize, LightFieldFromLfpFile::IMAGE_TYPE);
 	Rect srcRect, dstRect;
 	Mat srcROI, dstROI;
 	int  centeredRowIndex, centeredLensIndex;
@@ -80,7 +86,8 @@ Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoade
 			srcROI	= Mat(hexagonalLensGrid, srcRect);
 			dstROI	= Mat(rectifiedLensGrid, dstRect);
 
-			srcROI.copyTo(dstROI, lensMask);
+			getRectSubPix(inputImage, lensImageSize, lensCenter, dstROI);
+			//srcROI.copyTo(dstROI, lensMask);
 			//srcROI.copyTo(dstROI);
 
 			//rectangle(hexagonalLensGrid, srcRect, Scalar(255,0,0), 1);
@@ -89,7 +96,6 @@ Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoade
 		}
 	}
 
-	//return hexagonalLensGrid;
 	return rectifiedLensGrid;
 }
 
@@ -246,7 +252,8 @@ Vec3f LightFieldFromLfpFile::getLuminanceF(float x, float y, float u, float v)
 	Mat singlePixel;
 	const Size singlePixelSize = Size(1, 1);
 	Vec2f lensSize = Vec2f(this->ANGULAR_RESOLUTION.width, this->ANGULAR_RESOLUTION.height);
-	Vec2f centralLensCenter = Vec2f(this->SPARTIAL_RESOLUTION.width, this->SPARTIAL_RESOLUTION.height) / 2.0; // muss eigentlich auf ein Vielfaches der Linsengröße gerundet werden
+	Vec2f centralLensCenter = Vec2f(this->SPARTIAL_RESOLUTION.width,
+		this->SPARTIAL_RESOLUTION.height) / 2.0; // muss eigentlich auf ein Vielfaches der Linsengröße gerundet werden
 	Vec2f lensCenter = centralLensCenter + Vec2f(x, y).mul(lensSize);
 	lensCenter = Vec2f(round(lensCenter[0]), round(lensCenter[1]));
 	Vec2f position = lensCenter + angularVector;
@@ -258,7 +265,7 @@ Vec3f LightFieldFromLfpFile::getLuminanceF(float x, float y, float u, float v)
 
 Mat LightFieldFromLfpFile::generateSubapertureImage(const unsigned short u, const unsigned short v)
 {
-	Mat subapertureImage(this->SPARTIAL_RESOLUTION, this->rawImage.type());
+	Mat subapertureImage(this->SPARTIAL_RESOLUTION, CV_32FC3);
 
 	for (int y = 0; y < this->SPARTIAL_RESOLUTION.height; y++)
 		for (int x = 0; x < this->SPARTIAL_RESOLUTION.width; x++)
@@ -273,6 +280,28 @@ Mat LightFieldFromLfpFile::generateSubapertureImage(const unsigned short u, cons
 Mat LightFieldFromLfpFile::getSubapertureImage(const unsigned short u, const unsigned short v)
 {
 	return this->subapertureImages[v * this->ANGULAR_RESOLUTION.width + u];
+}
+
+
+Mat LightFieldFromLfpFile::getSubapertureImageF(const double u, const double v)
+{
+	Mat upperLeftImage	= this->subapertureImages[floor(v) * this->ANGULAR_RESOLUTION.width + floor(u)];
+	Mat lowerLeftImage	= this->subapertureImages[ceil(v) * this->ANGULAR_RESOLUTION.width + floor(u)];
+	Mat upperRightImage	= this->subapertureImages[floor(v) * this->ANGULAR_RESOLUTION.width + ceil(u)];
+	Mat lowerRightImage	= this->subapertureImages[ceil(v) * this->ANGULAR_RESOLUTION.width + ceil(u)];
+
+	float lowerWeight	= v - floor(v);
+	float upperWeight	= 1.0 - lowerWeight;
+	float rightWeight	= u - floor(u);
+	float leftWeight	= 1.0 - rightWeight;
+
+	float upperLeftWeight	= upperWeight * leftWeight;
+	float lowerLeftWeight	= lowerWeight * leftWeight;
+	float upperRightWeight	= upperWeight * rightWeight;
+	float lowerRightWeight	= lowerWeight * rightWeight;
+
+	return upperLeftImage * upperLeftWeight + upperRightImage * upperRightWeight +
+		lowerLeftImage * lowerLeftWeight + lowerRightImage * lowerRightWeight;
 }
 
 

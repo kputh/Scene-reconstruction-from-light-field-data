@@ -27,7 +27,7 @@ Mat ImageRenderer1::renderImage()
 		this->lightfield.SPARTIAL_RESOLUTION.height);
 	const Size imageSize = Size(saSize.width + this->lightfield.ANGULAR_RESOLUTION.width * uvScale[0] * weight,
 		saSize.height + this->lightfield.ANGULAR_RESOLUTION.height * uvScale[1] * weight);
-	const int imageType = CV_MAKETYPE(CV_32F, this->lightfield.getRawImage().channels());
+	const int imageType = CV_MAKETYPE(CV_32F, this->lightfield.getRawImage().channels() + 1);
 	Mat image = Mat::zeros(imageSize, imageType);
 
 	Mat subapertureImage, compositeImage, dstROI;
@@ -37,7 +37,6 @@ Mat ImageRenderer1::renderImage()
 	const Vec2d dstCenter = Vec2d(image.size().width, image.size().height) * 0.5;
 	Rect dstRect;
 	const Vec2d fromCenterToCorner = Vec2d(saSize.width, saSize.height) * -0.5;
-	const int interpolationMethod = (alpha < 0.0) ? CV_INTER_AREA : CV_INTER_CUBIC;
 
 	for(int u = 0; u < this->lightfield.ANGULAR_RESOLUTION.width; u++)
 	{
@@ -52,7 +51,7 @@ Mat ImageRenderer1::renderImage()
 			dstRect		= Rect(Point(round(dstCorner[0]), round(dstCorner[1])), saSize);
 			dstROI		= Mat(image, dstRect);
 
-			add(compositeImage, dstROI, dstROI, noArray(), dstROI.type());
+			add(compositeImage, dstROI, dstROI, noArray(), imageType);
 		}
 	}
 

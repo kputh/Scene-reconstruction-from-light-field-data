@@ -18,6 +18,8 @@ using namespace cv;
 class LightFieldFromLfpFile /*:
 	public LightField*/
 {
+	static const int IMAGE_TYPE;
+
 	LfpLoader loader;
 	Mat rawImage;
 	vector<Mat> subapertureImages;
@@ -37,6 +39,7 @@ public:
 	Vec3f getSubpixelLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v);
 	Vec3f getLuminanceF(float x, float y, float u, float v);
 	Mat getSubapertureImage(const unsigned short u, const unsigned short v);
+	Mat getSubapertureImageF(const double u, const double v);
 	Mat getRawImage();
 
 	double getRawFocalLength();

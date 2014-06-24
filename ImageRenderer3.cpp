@@ -48,7 +48,6 @@ Mat ImageRenderer3::renderImage()
 	Rect dstRect;
 	const Vec2d fromCenterToCorner = Vec2d(this->lightfield.SPARTIAL_RESOLUTION.width,
 		this->lightfield.SPARTIAL_RESOLUTION.height) * -0.5;
-	const int interpolationMethod = (alpha < 0.0) ? CV_INTER_AREA : CV_INTER_CUBIC;
 
 	for(int u = 0; u < this->lightfield.ANGULAR_RESOLUTION.width; u++)
 	{

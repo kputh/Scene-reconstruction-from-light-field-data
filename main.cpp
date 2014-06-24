@@ -32,11 +32,27 @@ int main( int argc, char** argv )
 		cout << "Loading of file at " << argv[1] << " successful." << endl;
 	
 		saveImageArc(lf, string(argv[1]), 8);
+		
 		/*
 		ImageRenderer1 renderer = ImageRenderer1();
 		renderer.setLightfield(lf);
 		renderer.setFocalLength(0.0068200001716613766);
-		image1 = renderer.getImage();
+		image1 = renderer.renderImage();
+		*/
+		/*
+		string window1 = "difference image";
+		namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
+		for (int u = 0; u < lf.ANGULAR_RESOLUTION.width; u++)
+		{
+			int v = 0;//for (int v = 0; v < lf.ANGULAR_RESOLUTION.height; v++)
+			{
+				cout << "(u, v) = (" << u << ", " << v << ")" << endl;
+				image1 = lf.getSubapertureImage(u, v);
+				//cout << "sub-aperture image = " << image1 << endl;
+				imshow(window1, image1);                   // Show our image inside it.
+				waitKey(0);                                          // Wait for a keystroke in the window
+			}
+		}
 		*/
 
 		t = ((double)getTickCount() - t)/getTickFrequency();
