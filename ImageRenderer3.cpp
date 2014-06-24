@@ -25,7 +25,8 @@ Mat ImageRenderer3::renderImage()
 
 	float standardDeviation1 = this->lightfield.ANGULAR_RESOLUTION.width / 4.0;
 	float standardDeviation2 = this->lightfield.ANGULAR_RESOLUTION.height / 4.0;
-	NormalDistribution apertureFunction = NormalDistribution(x0, y0, standardDeviation1, standardDeviation2);
+	NormalDistribution apertureFunction = NormalDistribution(x0, y0,
+		standardDeviation1, standardDeviation2);
 
 	const double F		= this->lightfield.getRawFocalLength();	// focal length of the raw image
 	const double alpha	= focalLength / F;
@@ -37,7 +38,7 @@ Mat ImageRenderer3::renderImage()
 		this->lightfield.SPARTIAL_RESOLUTION.height);
 	const Size imageSize = Size(saSize.width + this->lightfield.ANGULAR_RESOLUTION.width * uvScale[0] * weight,
 		saSize.height + this->lightfield.ANGULAR_RESOLUTION.height * uvScale[1] * weight);
-	const int imageType = CV_MAKETYPE(CV_32F, this->lightfield.getRawImage().channels() + 1);
+	const int imageType = CV_MAKETYPE(CV_32F, this->lightfield.getRawImage().channels()/* + 1*/);
 	Mat image = Mat::zeros(imageSize, imageType);
 
 	Mat subapertureImage, compositeImage, dstROI;
@@ -58,19 +59,20 @@ Mat ImageRenderer3::renderImage()
 			subapertureImage *= apertureFunction.f(u * uvScale[0] - angularCorrection[0],
 				v * uvScale[1] - angularCorrection[1]);
 
-			compositeImage = appendRayCountingChannel(subapertureImage);
+			//compositeImage = appendRayCountingChannel(subapertureImage);
 			
 			translation	= (Vec2d(u * uvScale[0], v * uvScale[1]) - angularCorrection) * weight;
 			dstCorner	= dstCenter + translation + fromCenterToCorner;
 			dstRect		= Rect(Point(round(dstCorner[0]), round(dstCorner[1])), saSize);
 			dstROI		= Mat(image, dstRect);
 
-			add(compositeImage, dstROI, dstROI, noArray(), image.type());
+			add(subapertureImage, dstROI, dstROI, noArray(), imageType);
 		}
 	}
 
 	// scale luminance/color values to fit inside [0, 1]
-	Mat normalizedImage = normalizeByRayCount(image);
+	//Mat normalizedImage = normalizeByRayCount(image);
+	Mat normalizedImage = adjustLuminanceSpace(image);
 
 	return normalizedImage;
 }

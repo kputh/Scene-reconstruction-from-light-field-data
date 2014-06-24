@@ -140,6 +140,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="DepthEstimator.cpp" />
     <ClCompile Include="ImageRenderer.cpp" />
     <ClCompile Include="ImageRenderer1.cpp" />
     <ClCompile Include="ImageRenderer2.cpp" />
@@ -150,9 +151,11 @@
     <ClCompile Include="LightFieldFromLfpFile.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="NormalDistribution.cpp" />
+    <ClCompile Include="StereoBMDisparityEstimator.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="DepthEstimator.h" />
     <ClInclude Include="ImageRenderer.h" />
     <ClInclude Include="ImageRenderer1.h" />
     <ClInclude Include="ImageRenderer2.h" />
@@ -162,6 +165,7 @@
     <ClInclude Include="LightField.h" />
     <ClInclude Include="LightFieldFromLfpFile.h" />
     <ClInclude Include="NormalDistribution.h" />
+    <ClInclude Include="StereoBMDisparityEstimator.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

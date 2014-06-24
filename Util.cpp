@@ -52,7 +52,7 @@ void saveImageToPNGFile(string fileName, Mat image)
 void saveImageArc(LightFieldFromLfpFile lightfield, string sourceFileName, int imageCount)
 {
 	float angle, x, y;
-	float radius = 6;// Streifen sichtbar bei 3+
+	float radius = 4;
 	float f = 0.0068200001716613766;
 
 	ImageRenderer3 renderer = ImageRenderer3();
@@ -71,7 +71,6 @@ void saveImageArc(LightFieldFromLfpFile lightfield, string sourceFileName, int i
 		y = sin (angle) * radius;
 		renderer.setPinholePosition(Vec2i(round(x), round(y)));
 		image = renderer.renderImage();
-		//image = lightfield.getImage(f, x, y);
 		imageFileName = sourceFileName + to_string((long double)i) + fileExtension;
 		saveImageToPNGFile(imageFileName, image);
 	}
