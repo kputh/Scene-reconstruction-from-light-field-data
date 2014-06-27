@@ -6,13 +6,13 @@
 #include <opencv2/imgproc/imgproc.hpp>
 #include "Util.h"
 #include "LfpLoader.h"
-#include "LightFieldFromLfpFile.h"
+#include "LightFieldPicture.h"
 
 
-const int LightFieldFromLfpFile::IMAGE_TYPE = CV_32FC3;
+const int LightFieldPicture::IMAGE_TYPE = CV_32FC3;
 
 
-Mat LightFieldFromLfpFile::convertBayer2RGB(const Mat bayerImage)
+Mat LightFieldPicture::convertBayer2RGB(const Mat bayerImage)
 {
 	Mat colorImage(bayerImage.size(), CV_16UC3);
 	cvtColor(bayerImage, colorImage, CV_BayerBG2RGB);
@@ -20,10 +20,10 @@ Mat LightFieldFromLfpFile::convertBayer2RGB(const Mat bayerImage)
 }
 
 
-Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoader metadata)
+Mat LightFieldPicture::rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoader metadata)
 {
 	Mat inputImage;
-	hexagonalLensGrid.convertTo(inputImage, LightFieldFromLfpFile::IMAGE_TYPE);
+	hexagonalLensGrid.convertTo(inputImage, LightFieldPicture::IMAGE_TYPE);
 
 	// 1) read LFP metadata
 	const double pixelPitch		= metadata.pixelPitch;
@@ -55,7 +55,7 @@ Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoade
 	circle(lensMask, lensCenter, lensRadius, circleColor, CV_FILLED);
 
 	// 4) copy each lens' image from the hexagonal grid to the rectilinear grid
-	Mat rectifiedLensGrid			= Mat::zeros(rectifiedSize, LightFieldFromLfpFile::IMAGE_TYPE);
+	Mat rectifiedLensGrid			= Mat::zeros(rectifiedSize, LightFieldPicture::IMAGE_TYPE);
 	Rect srcRect, dstRect;
 	Mat srcROI, dstROI;
 	int  centeredRowIndex, centeredLensIndex;
@@ -100,12 +100,12 @@ Mat LightFieldFromLfpFile::rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoade
 }
 
 
-LightFieldFromLfpFile::LightFieldFromLfpFile(void)
+LightFieldPicture::LightFieldPicture(void)
 {
 }
 
 
-LightFieldFromLfpFile::LightFieldFromLfpFile(const std::string& pathToFile)
+LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 {
 	// load raw data
 	this->loader	= LfpLoader(pathToFile);
@@ -148,13 +148,13 @@ LightFieldFromLfpFile::LightFieldFromLfpFile(const std::string& pathToFile)
 }
 
 
-LightFieldFromLfpFile::~LightFieldFromLfpFile(void)
+LightFieldPicture::~LightFieldPicture(void)
 {
 	this->rawImage.release();
 }
 
 
-Vec3f LightFieldFromLfpFile::getLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v)
+Vec3f LightFieldPicture::getLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v)
 {
 	// handle coordinates outside the recorded lightfield
 	const Point origin = Point(0, 0);
@@ -187,7 +187,7 @@ Vec3f LightFieldFromLfpFile::getLuminance(unsigned short x, unsigned short y, un
 }
 
 
-Vec3f LightFieldFromLfpFile::getSubpixelLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v)
+Vec3f LightFieldPicture::getSubpixelLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v)
 {
 	// handle coordinates outside the recorded lightfield
 	const Point origin = Point(0, 0);
@@ -221,7 +221,7 @@ Vec3f LightFieldFromLfpFile::getSubpixelLuminance(unsigned short x, unsigned sho
 }
 
 
-Vec3f LightFieldFromLfpFile::getLuminanceF(float x, float y, float u, float v)
+Vec3f LightFieldPicture::getLuminanceF(float x, float y, float u, float v)
 {
 	// handle coordinates outside the recorded lightfield
 	const float halfWidth = this->SPARTIAL_RESOLUTION.width / 2.0;
@@ -263,27 +263,27 @@ Vec3f LightFieldFromLfpFile::getLuminanceF(float x, float y, float u, float v)
 }
 
 
-Mat LightFieldFromLfpFile::generateSubapertureImage(const unsigned short u, const unsigned short v)
+Mat LightFieldPicture::generateSubapertureImage(const unsigned short u, const unsigned short v)
 {
-	Mat subapertureImage(this->SPARTIAL_RESOLUTION, CV_32FC3);
+	Mat_<Vec3f> subapertureImage(this->SPARTIAL_RESOLUTION, CV_32FC3);
 
 	for (int y = 0; y < this->SPARTIAL_RESOLUTION.height; y++)
 		for (int x = 0; x < this->SPARTIAL_RESOLUTION.width; x++)
 		{
-			subapertureImage.at<Vec3f>(Point(x, y)) = this->getLuminance(x, y, u, v);
+			subapertureImage(Point(x, y)) = this->getLuminance(x, y, u, v);
 		}
 
 	return subapertureImage;
 }
 
 
-Mat LightFieldFromLfpFile::getSubapertureImage(const unsigned short u, const unsigned short v)
+Mat LightFieldPicture::getSubapertureImage(const unsigned short u, const unsigned short v)
 {
 	return this->subapertureImages[v * this->ANGULAR_RESOLUTION.width + u];
 }
 
 
-Mat LightFieldFromLfpFile::getSubapertureImageF(const double u, const double v)
+Mat LightFieldPicture::getSubapertureImageF(const double u, const double v)
 {
 	Mat upperLeftImage	= this->subapertureImages[floor(v) * this->ANGULAR_RESOLUTION.width + floor(u)];
 	Mat lowerLeftImage	= this->subapertureImages[ceil(v) * this->ANGULAR_RESOLUTION.width + floor(u)];
@@ -305,13 +305,13 @@ Mat LightFieldFromLfpFile::getSubapertureImageF(const double u, const double v)
 }
 
 
-Mat LightFieldFromLfpFile::getRawImage()
+Mat LightFieldPicture::getRawImage()
 {
 	return this->rawImage;
 }
 
 
-double LightFieldFromLfpFile::getRawFocalLength()
+double LightFieldPicture::getRawFocalLength()
 {
 	return this->loader.focalLength;
 }

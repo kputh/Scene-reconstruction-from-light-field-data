@@ -1,7 +1,7 @@
 #pragma once
 
 #include <opencv2/core/core.hpp>
-#include "LightFieldFromLfpFile.h"
+#include "LightFieldPicture.h"
 
 /**
  * The abstract base class for any algorithm which can render an image from a
@@ -17,15 +17,15 @@
 class ImageRenderer
 {
 protected:
-	LightFieldFromLfpFile lightfield;
+	LightFieldPicture lightfield;
 	double focalLength;
 	Vec2i pinholePosition;
 public:
 	ImageRenderer(void);
 	~ImageRenderer(void);
 
-	LightFieldFromLfpFile getLightfield();
-	void setLightfield(LightFieldFromLfpFile lightfield);
+	LightFieldPicture getLightfield();
+	void setLightfield(LightFieldPicture lightfield);
 	double getFocalLength();
 	void setFocalLength(double focalLength);
 	Vec2i getPinholePosition();

@@ -9,13 +9,13 @@ using namespace std;
 using namespace cv;
 
 /**
- * The data structure and abstract base class representing a light field.
+ * The data structure for a light field from a Light Field Picture (*.lfp) file.
  *
  * @author      Kai Puth <kai.puth@student.htw-berlin.de>
  * @version     0.1
  * @since       2014-05-27
  */
-class LightFieldFromLfpFile /*:
+class LightFieldPicture /*:
 	public LightField*/
 {
 	static const int IMAGE_TYPE;
@@ -31,9 +31,9 @@ public:
 	Size SPARTIAL_RESOLUTION;
 	Size ANGULAR_RESOLUTION;
 
-	LightFieldFromLfpFile(void);
-	LightFieldFromLfpFile(const string& pathToFile);
-	~LightFieldFromLfpFile(void);
+	LightFieldPicture(void);
+	LightFieldPicture(const string& pathToFile);
+	~LightFieldPicture(void);
 
 	Vec3f getLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v);
 	Vec3f getSubpixelLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v);

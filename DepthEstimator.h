@@ -1,7 +1,7 @@
 #pragma once
 
 #include <opencv2/core/core.hpp>
-#include "LightFieldFromLfpFile.h"
+#include "LightFieldPicture.h"
 
 /**
  * The abstract base class for any algorithm which can estimate a depth map
@@ -17,6 +17,6 @@ public:
 	DepthEstimator(void);
 	~DepthEstimator(void);
 
-	virtual Mat estimateDepth(const LightFieldFromLfpFile lightfield) =0;
+	virtual Mat estimateDepth(const LightFieldPicture lightfield) =0;
 };
 

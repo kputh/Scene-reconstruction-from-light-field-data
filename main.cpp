@@ -8,12 +8,13 @@
 #include <iostream>
 
 #include "Util.h"
-#include "LightFieldFromLfpFile.h"
+#include "LightFieldPicture.h"
 #include "ImageRenderer.h"
 #include "ImageRenderer1.h"
 #include "ImageRenderer2.h"
 #include "ImageRenderer3.h"
 #include "StereoBMDisparityEstimator.h"
+#include "DepthEstimator1.h"
 
 using namespace cv;
 using namespace std;
@@ -30,11 +31,11 @@ int main( int argc, char** argv )
 	try {
 		double t = (double)getTickCount();
 
-		LightFieldFromLfpFile lf(argv[1]);
+		LightFieldPicture lf(argv[1]);
 		cout << "Loading of file at " << argv[1] << " successful." << endl;
 	
-		StereoBMDisparityEstimator estimator = StereoBMDisparityEstimator();
-		estimator.estimateDepth(lf);
+		DepthEstimator1 estimator = DepthEstimator1();
+		image1 = estimator.estimateDepth(lf);
 		/*
 		ImageRenderer3 renderer = ImageRenderer3();
 		renderer.setLightfield(lf);
@@ -54,10 +55,10 @@ int main( int argc, char** argv )
 		StereoBM stereo = StereoBM(StereoBM::BASIC_PRESET, 16, 15);
 		stereo(image1, image2, disparity, CV_32F);
 		
-		string window1 = "image1";
+		string window1 = "optical flow";
 		namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
 		imshow(window1, image1);
-
+		
 		string window2 = "image2";
 		namedWindow(window2, WINDOW_NORMAL);// Create a window for display. (scale down size)
 		imshow(window2, image2);

@@ -5,6 +5,11 @@
 #include "ImageRenderer3.h"
 
 
+const float StereoBMDisparityEstimator::FOCAL_LENGTH	= 0.0068200001716613766;
+const Vec2i StereoBMDisparityEstimator::LEFT_POSITION	= Vec2i(0,0);
+const Vec2i StereoBMDisparityEstimator::RIGHT_POSITION	= Vec2i(5,0);
+
+
 StereoBMDisparityEstimator::StereoBMDisparityEstimator(void)
 {
 }
@@ -15,24 +20,24 @@ StereoBMDisparityEstimator::~StereoBMDisparityEstimator(void)
 }
 
 
-Mat StereoBMDisparityEstimator::estimateDepth(const LightFieldFromLfpFile lightfield)
+Mat StereoBMDisparityEstimator::estimateDepth(const LightFieldPicture lightfield)
 {
+	// render images
 	ImageRenderer3 renderer = ImageRenderer3();
 	renderer.setLightfield(lightfield);
-	renderer.setFocalLength(0.0068200001716613766);
+	renderer.setFocalLength(StereoBMDisparityEstimator::FOCAL_LENGTH);
 
-	const Vec2i leftPosition = Vec2i(0,0);
-	renderer.setPinholePosition(leftPosition);
+	renderer.setPinholePosition(StereoBMDisparityEstimator::LEFT_POSITION);
 	Mat image1 = renderer.renderImage();
 	cvtColor(image1, image1, CV_RGB2GRAY);
 	image1.convertTo(image1, CV_8UC1, 255.0);
 		
-	const Vec2i rightPosition = Vec2i(5,0);
-	renderer.setPinholePosition(rightPosition);
+	renderer.setPinholePosition(StereoBMDisparityEstimator::RIGHT_POSITION);
 	Mat image2 = renderer.renderImage();
 	cvtColor(image2, image2, CV_RGB2GRAY);
 	image2.convertTo(image2, CV_8UC1, 255.0);
 
+	// estimate disparity
 	Mat disparity;
 	StereoBM stereo = StereoBM(StereoBM::BASIC_PRESET, 32, 21);
 	stereo(image1, image2, disparity, CV_32F);

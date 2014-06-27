@@ -5,10 +5,14 @@
 class StereoBMDisparityEstimator :
 	public DepthEstimator
 {
+	static const float FOCAL_LENGTH;
+	static const Vec2i LEFT_POSITION;
+	static const Vec2i RIGHT_POSITION;
+
 public:
 	StereoBMDisparityEstimator(void);
 	~StereoBMDisparityEstimator(void);
 
-	Mat estimateDepth(const LightFieldFromLfpFile lightfield);
+	Mat estimateDepth(const LightFieldPicture lightfield);
 };
 

@@ -49,7 +49,7 @@ void saveImageToPNGFile(string fileName, Mat image)
 	cout << "Image saved as file " << fileName << "." << endl;
 }
 
-void saveImageArc(LightFieldFromLfpFile lightfield, string sourceFileName, int imageCount)
+void saveImageArc(LightFieldPicture lightfield, string sourceFileName, int imageCount)
 {
 	float angle, x, y;
 	float radius = 4;

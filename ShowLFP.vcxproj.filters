@@ -54,6 +54,12 @@
     <ClCompile Include="StereoBMDisparityEstimator.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="DepthEstimator1.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="DCDepthEstimator.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lfpsplitter.h">
@@ -63,9 +69,6 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="LightField.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="LightFieldFromLfpFile.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="NormalDistribution.h">
@@ -90,6 +93,15 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="StereoBMDisparityEstimator.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="DepthEstimator1.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="LightFieldPicture.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="DCDepthEstimator.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

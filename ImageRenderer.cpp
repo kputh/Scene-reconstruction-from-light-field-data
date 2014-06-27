@@ -11,13 +11,13 @@ ImageRenderer::~ImageRenderer(void)
 }
 
 
-LightFieldFromLfpFile ImageRenderer::getLightfield()
+LightFieldPicture ImageRenderer::getLightfield()
 {
 	return this->lightfield;
 }
 
 
-void ImageRenderer::setLightfield(LightFieldFromLfpFile lightfield)
+void ImageRenderer::setLightfield(LightFieldPicture lightfield)
 {
 	this->lightfield = lightfield;
 }
