@@ -18,13 +18,16 @@ using namespace cv;
 class LightFieldPicture /*:
 	public LightField*/
 {
+	typedef Vec3f luminanceType;
 	static const int IMAGE_TYPE;
+
+	static const luminanceType ZERO_LUMINANCE;
 
 	LfpLoader loader;
 	Mat rawImage;
 	vector<Mat> subapertureImages;
 
-	static Mat convertBayer2RGB(const Mat bayerImage);
+	static Mat demosaicImage(const Mat bayerImage);
 	static Mat rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoader metadata);
 	Mat generateSubapertureImage(const unsigned short u, const unsigned short v);
 public:
@@ -35,9 +38,11 @@ public:
 	LightFieldPicture(const string& pathToFile);
 	~LightFieldPicture(void);
 
-	Vec3f getLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v);
-	Vec3f getSubpixelLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v);
-	Vec3f getLuminanceF(float x, float y, float u, float v);
+	luminanceType getLuminance(unsigned short x, unsigned short y,
+		unsigned short u, unsigned short v);
+	luminanceType getSubpixelLuminance(unsigned short x, unsigned short y,
+		unsigned short u, unsigned short v);
+	luminanceType getLuminanceF(float x, float y, float u, float v);
 	Mat getSubapertureImage(const unsigned short u, const unsigned short v);
 	Mat getSubapertureImageF(const double u, const double v);
 	Mat getRawImage();

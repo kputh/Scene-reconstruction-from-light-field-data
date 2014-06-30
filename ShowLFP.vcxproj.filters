@@ -27,9 +27,6 @@
     <ClCompile Include="LightField.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="LightFieldFromLfpFile.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
     <ClCompile Include="NormalDistribution.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
@@ -58,6 +55,9 @@
       <Filter>Quelldateien</Filter>
     </ClCompile>
     <ClCompile Include="DCDepthEstimator.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="LightFieldPicture.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>

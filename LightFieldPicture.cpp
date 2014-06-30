@@ -10,13 +10,15 @@
 
 
 const int LightFieldPicture::IMAGE_TYPE = CV_32FC3;
+const LightFieldPicture::luminanceType LightFieldPicture::ZERO_LUMINANCE
+	= Vec3f(0, 0, 0);
 
 
-Mat LightFieldPicture::convertBayer2RGB(const Mat bayerImage)
+Mat LightFieldPicture::demosaicImage(const Mat bayerImage)
 {
-	Mat colorImage(bayerImage.size(), CV_16UC3);
-	cvtColor(bayerImage, colorImage, CV_BayerBG2RGB);
-	return colorImage;
+	Mat demosaicedImage(bayerImage.size(), CV_16UC3);
+	cvtColor(bayerImage, demosaicedImage, CV_BayerBG2RGB);
+	return demosaicedImage;
 }
 
 
@@ -125,13 +127,13 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 	this->SPARTIAL_RESOLUTION	= Size(columnCount, rowCount);
 
 	// process raw image
-	Mat rgbImage		= this->convertBayer2RGB(loader.bayerImage);
-	Mat rectifiedImage	= this->rectifyLensGrid(rgbImage, loader);
+	Mat demosaicedImage	= this->demosaicImage(loader.bayerImage);
+	Mat rectifiedImage	= this->rectifyLensGrid(demosaicedImage, loader); // TODO abschaffen?
 
 	// scale luminance space to (image) data type
-	Mat floatImage = adjustLuminanceSpace(rectifiedImage);
+	//Mat floatImage = adjustLuminanceSpace(rectifiedImage); // TODO weglassen?
 
-	this->rawImage	= floatImage;
+	this->rawImage	= rectifiedImage;
 
 	// generate all sub-aperture images
 	size_t saImageCount = this->ANGULAR_RESOLUTION.width * this->ANGULAR_RESOLUTION.height;
@@ -154,15 +156,14 @@ LightFieldPicture::~LightFieldPicture(void)
 }
 
 
-Vec3f LightFieldPicture::getLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v)
+LightFieldPicture::luminanceType LightFieldPicture::getLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v)
 {
 	// handle coordinates outside the recorded lightfield
 	const Point origin = Point(0, 0);
 	const Rect validSpartialCoordinates = Rect(origin, this->SPARTIAL_RESOLUTION);
 	// luminance outside the recorded spartial range is zero
-	const Vec3f zeroLuminance = Vec3f(0, 0, 0);
 	if (!validSpartialCoordinates.contains(Point(x, y)))
-		return zeroLuminance;
+		return ZERO_LUMINANCE;
 
 	// luminance outside the recorded angular range is clamped to the closest valid ray
 	const Vec2f translationToOrigin = Vec2f(this->ANGULAR_RESOLUTION.width,
@@ -183,19 +184,19 @@ Vec3f LightFieldPicture::getLuminance(unsigned short x, unsigned short y, unsign
 
 	Point pixelPosition = Point(x * this->ANGULAR_RESOLUTION.width + u,
 		y * this->ANGULAR_RESOLUTION.height + v);
-	return rawImage.at<Vec3f>(pixelPosition);
+	return rawImage.at<luminanceType>(pixelPosition);
 }
 
 
-Vec3f LightFieldPicture::getSubpixelLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v)
+LightFieldPicture::luminanceType LightFieldPicture::getSubpixelLuminance(
+	unsigned short x, unsigned short y, unsigned short u, unsigned short v)
 {
 	// handle coordinates outside the recorded lightfield
 	const Point origin = Point(0, 0);
 	const Rect validSpartialCoordinates = Rect(origin, this->SPARTIAL_RESOLUTION);
 	// luminance outside the recorded spartial range is zero
-	const Vec3f zeroLuminance = Vec3f(0, 0, 0);
 	if (!validSpartialCoordinates.contains(Point(x, y)))
-		return zeroLuminance;
+		return ZERO_LUMINANCE;
 
 	// luminance outside the recorded angular range is clamped to the closest valid ray
 	const Vec2f translationToOrigin = Vec2f(this->ANGULAR_RESOLUTION.width,
@@ -217,19 +218,18 @@ Vec3f LightFieldPicture::getSubpixelLuminance(unsigned short x, unsigned short y
 	Point2f center = Point2f(x * this->ANGULAR_RESOLUTION.width + u,
 		y * this->ANGULAR_RESOLUTION.height + v);
 	getRectSubPix(rawImage, singlePixelSize, center, singlePixel);
-	return singlePixel.at<Vec3f>(origin);
+	return singlePixel.at<luminanceType>(origin);
 }
 
 
-Vec3f LightFieldPicture::getLuminanceF(float x, float y, float u, float v)
+LightFieldPicture::luminanceType LightFieldPicture::getLuminanceF(float x, float y, float u, float v)
 {
 	// handle coordinates outside the recorded lightfield
 	const float halfWidth = this->SPARTIAL_RESOLUTION.width / 2.0;
 	const float halfHeight = this->SPARTIAL_RESOLUTION.height / 2.0;
 	// luminance outside the recorded spartial range is zero
-	const Vec3f zeroLuminance = Vec3f(0, 0, 0);
 	if (abs(x) > halfWidth || abs(y) > halfHeight)
-		return zeroLuminance;
+		return ZERO_LUMINANCE;
 
 	// luminance outside the recorded angular range is clamped to the closest valid ray
 	Vec2f angularVector = Vec2f(u, v);
@@ -246,7 +246,7 @@ Vec3f LightFieldPicture::getLuminanceF(float x, float y, float u, float v)
 	const unsigned int rawX = x * this->ANGULAR_RESOLUTION.width + u;
 	const unsigned int rawY = y * this->ANGULAR_RESOLUTION.height + v;
 
-	return this->rawImage.at<Vec3f>(Point(rawX, rawY));
+	return this->rawImage.at<luminanceType>(Point(rawX, rawY));
 	*/
 
 	Mat singlePixel;
@@ -259,13 +259,13 @@ Vec3f LightFieldPicture::getLuminanceF(float x, float y, float u, float v)
 	Vec2f position = lensCenter + angularVector;
 	getRectSubPix(rawImage, singlePixelSize, Point2f(position), singlePixel);
 
-	return singlePixel.at<Vec3f>(Point(0, 0));
+	return singlePixel.at<luminanceType>(Point(0, 0));
 }
 
 
 Mat LightFieldPicture::generateSubapertureImage(const unsigned short u, const unsigned short v)
 {
-	Mat_<Vec3f> subapertureImage(this->SPARTIAL_RESOLUTION, CV_32FC3);
+	Mat_<luminanceType> subapertureImage(this->SPARTIAL_RESOLUTION, CV_32FC3);
 
 	for (int y = 0; y < this->SPARTIAL_RESOLUTION.height; y++)
 		for (int x = 0; x < this->SPARTIAL_RESOLUTION.width; x++)
