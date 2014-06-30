@@ -25,7 +25,7 @@ Mat LightFieldPicture::demosaicImage(const Mat bayerImage)
 Mat LightFieldPicture::rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoader metadata)
 {
 	Mat inputImage;
-	hexagonalLensGrid.convertTo(inputImage, LightFieldPicture::IMAGE_TYPE);
+	hexagonalLensGrid.convertTo(inputImage, IMAGE_TYPE);
 
 	// 1) read LFP metadata
 	const double pixelPitch		= metadata.pixelPitch;
@@ -57,7 +57,7 @@ Mat LightFieldPicture::rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoader me
 	circle(lensMask, lensCenter, lensRadius, circleColor, CV_FILLED);
 
 	// 4) copy each lens' image from the hexagonal grid to the rectilinear grid
-	Mat rectifiedLensGrid			= Mat::zeros(rectifiedSize, LightFieldPicture::IMAGE_TYPE);
+	Mat rectifiedLensGrid			= Mat::zeros(rectifiedSize, IMAGE_TYPE);
 	Rect srcRect, dstRect;
 	Mat srcROI, dstROI;
 	int  centeredRowIndex, centeredLensIndex;
@@ -67,9 +67,10 @@ Mat LightFieldPicture::rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoader me
 	const Point2d fromCenterToCorner	= Point2d(1, 1) * -(lensPitchInPixels / 2.0);
 	Point2d lensImageCorner;
 	Point srcCorner, dstCorner;
-	for (unsigned int rowIndex = 0; rowIndex < rowCount; rowIndex++)
+	unsigned int rowIndex, lensIndex;
+	for (rowIndex = 0; rowIndex < rowCount; rowIndex++)
 	{
-		for (unsigned int lensIndex = 0; lensIndex < lensCountPerRow; lensIndex++)
+		for (lensIndex = 0; lensIndex < lensCountPerRow; lensIndex++)
 		{
 			centeredRowIndex	= rowIndex - rowCount / 2;
 			centeredLensIndex	= lensIndex - lensCountPerRow / 2;
@@ -130,18 +131,15 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 	Mat demosaicedImage	= this->demosaicImage(loader.bayerImage);
 	Mat rectifiedImage	= this->rectifyLensGrid(demosaicedImage, loader); // TODO abschaffen?
 
-	// scale luminance space to (image) data type
-	//Mat floatImage = adjustLuminanceSpace(rectifiedImage); // TODO weglassen?
-
 	this->rawImage	= rectifiedImage;
 
 	// generate all sub-aperture images
 	size_t saImageCount = this->ANGULAR_RESOLUTION.width * this->ANGULAR_RESOLUTION.height;
 	this->subapertureImages = vector<Mat>(saImageCount);
-	int index = 0;
-	for (int v = 0; v < this->ANGULAR_RESOLUTION.height; v++)
+	int u, v, index = 0;
+	for (v = 0; v < this->ANGULAR_RESOLUTION.height; v++)
 	{
-		for (int u = 0; u < this->ANGULAR_RESOLUTION.width; u++)
+		for (u = 0; u < this->ANGULAR_RESOLUTION.width; u++)
 		{
 			this->subapertureImages[index] = this->generateSubapertureImage(u, v);
 			index++;
@@ -267,8 +265,9 @@ Mat LightFieldPicture::generateSubapertureImage(const unsigned short u, const un
 {
 	Mat_<luminanceType> subapertureImage(this->SPARTIAL_RESOLUTION, CV_32FC3);
 
-	for (int y = 0; y < this->SPARTIAL_RESOLUTION.height; y++)
-		for (int x = 0; x < this->SPARTIAL_RESOLUTION.width; x++)
+	int x, y;
+	for (y = 0; y < this->SPARTIAL_RESOLUTION.height; y++)
+		for (x = 0; x < this->SPARTIAL_RESOLUTION.width; x++)
 		{
 			subapertureImage(Point(x, y)) = this->getLuminance(x, y, u, v);
 		}

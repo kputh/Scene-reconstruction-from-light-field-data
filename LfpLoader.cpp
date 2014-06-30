@@ -5,9 +5,9 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 
-const char LfpLoader::IMAGE_KEY[] = "image";
-const char LfpLoader::WIDTH_KEY[] = "width";
-const char LfpLoader::HEIGHT_KEY[] = "height";
+const char LfpLoader::IMAGE_KEY[]	= "image";
+const char LfpLoader::WIDTH_KEY[]	= "width";
+const char LfpLoader::HEIGHT_KEY[]	= "height";
 
 
 LfpLoader::LfpLoader(void)

@@ -24,9 +24,10 @@ Mat ImageRenderer2::renderImage()
 	Vec2f angularCorrection = Vec2f(this->lightfield.ANGULAR_RESOLUTION.width, this->lightfield.ANGULAR_RESOLUTION.height) * -0.5;
 	Vec2f pixelPosition, angularCoordinates;
 
-	for (int y = 0; y < this->lightfield.SPARTIAL_RESOLUTION.height; y++)
+	int x, y;
+	for (y = 0; y < this->lightfield.SPARTIAL_RESOLUTION.height; y++)
 	{
-		for (int x = 0; x < this->lightfield.SPARTIAL_RESOLUTION.width; x++)
+		for (x = 0; x < this->lightfield.SPARTIAL_RESOLUTION.width; x++)
 		{
 			pixelPosition = Vec2f(x, y) + spartialCorrection;
 			angularCoordinates = ((pinholePosition - pixelPosition) / beta) + pixelPosition;

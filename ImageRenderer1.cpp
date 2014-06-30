@@ -38,9 +38,10 @@ Mat ImageRenderer1::renderImage()
 	Rect dstRect;
 	const Vec2d fromCenterToCorner = Vec2d(saSize.width, saSize.height) * -0.5;
 
-	for(int u = 0; u < this->lightfield.ANGULAR_RESOLUTION.width; u++)
+	int u, v;
+	for(u = 0; u < this->lightfield.ANGULAR_RESOLUTION.width; u++)
 	{
-		for(int v = 0; v < this->lightfield.ANGULAR_RESOLUTION.height; v++)
+		for(v = 0; v < this->lightfield.ANGULAR_RESOLUTION.height; v++)
 		{
 			subapertureImage = this->lightfield.getSubapertureImage(u, v);
 

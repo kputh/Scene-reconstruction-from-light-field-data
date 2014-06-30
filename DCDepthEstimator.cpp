@@ -48,6 +48,8 @@ Mat CDCDepthEstimator::estimateDepth(const LightFieldPicture lightfield)
 	Mat CorrespondenceConfidence = calculateConfidence(minCorrespondenceResponses);
 	// TODO split channels for first and second extremum
 
+	// TODO/debug save to attributes
+
 	// 3) global operation to combine cues
 	Mat depth = mrf(maxDefocusResponses, minCorrespondenceResponses,
 		defocusConfidence, CorrespondenceConfidence);
@@ -113,11 +115,11 @@ Mat CDCDepthEstimator::argMaxAlpha(vector<Mat> responses)
 	Mat mat1, mat2;
 	int height = responses[0].size().height;
 	int width = responses[0].size().width;
-	int responseIndex;
 	Vec2i tmp;
 	float response1, response2;
 	MatIterator_<Vec2f> it1, it2, end1;
-	for (int loopIndex = 0; loopIndex < 2; loopIndex++)
+	int loopIndex, responseIndex;
+	for (loopIndex = 0; loopIndex < 2; loopIndex++)
 	{
 		for (responseIndex = 1; responseIndex < responses.size() - loopIndex; responseIndex++)
 		{
@@ -161,11 +163,11 @@ Mat CDCDepthEstimator::argMinAlpha(vector<Mat> responses)
 	Mat mat1, mat2;
 	int height = responses[0].size().height;
 	int width = responses[0].size().width;
-	int responseIndex;
 	Vec2i tmp;
 	float response1, response2;
 	MatIterator_<Vec2f> it1, it2, end1;
-	for (int loopIndex = 0; loopIndex < 2; loopIndex++)
+	int loopIndex, responseIndex;
+	for (loopIndex = 0; loopIndex < 2; loopIndex++)
 	{
 		for (responseIndex = 1; responseIndex < responses.size() - loopIndex; responseIndex++)
 		{
