@@ -43,6 +43,7 @@ class CDCDepthEstimator :
 	Mat calculateConfidence(Mat extrema);
 	Mat getFirstExtremum(Mat extrema);
 	Mat mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confidence2);
+	Mat pickDepthWithMaxConfidence(Mat depth1, Mat depth2, Mat confidence1, Mat confidence2);
 public:
 	CDCDepthEstimator(void);
 	~CDCDepthEstimator(void);

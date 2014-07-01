@@ -18,7 +18,7 @@ const int CDCDepthEstimator::BORDER_TYPE			= BORDER_DEFAULT; // TODO
 const Mat CDCDepthEstimator::DEFOCUS_WINDOW			= Mat(DEFOCUS_WINDOW_SIZE,
 	CV_32F, Scalar(1.0 / DEFOCUS_WINDOW_SIZE.area()));
 const Mat CDCDepthEstimator::CORRESPONDENCE_WINDOW	= Mat(DEFOCUS_WINDOW_SIZE,
-	CV_32F, Scalar(1.0 / CORRESPONDENCE_WINDOW.area()));
+	CV_32F, Scalar(1.0 / CORRESPONDENCE_WINDOW_SIZE.area()));
 
 
 CDCDepthEstimator::CDCDepthEstimator(void)
@@ -66,38 +66,53 @@ Mat CDCDepthEstimator::estimateDepth(const LightFieldPicture lightfield)
 	Mat maxDefocusResponse = getFirstExtremum(maxDefocusResponses);
 	Mat minCorrespondenceResponse = getFirstExtremum(minCorrespondenceResponses);
 
+	// 3) global operation to combine cues
+	/*
+	Mat depth = mrf(maxDefocusResponse, minCorrespondenceResponse,
+		defocusConfidence, correspondenceConfidence);
+	*/
+	Mat depth = pickDepthWithMaxConfidence(maxDefocusResponse,
+		minCorrespondenceResponse, defocusConfidence, correspondenceConfidence);
+
+	// 4) compute actual depth from focal length
+	// TODO
+
 	// TODO/debug save to attributes
+	//renderer->setFocalLength(?);
+	Mat image = renderer->renderImage();
+	// TODO Werte sind außerhalb des erwarteten Bereichs DEBUGGEN!!!
 	normalize(maxDefocusResponse, maxDefocusResponse, 0, 1, NORM_MINMAX);
+	normalize(minCorrespondenceResponse, minCorrespondenceResponse, 0, 1, NORM_MINMAX);
+	normalize(defocusConfidence, defocusConfidence, 0, 1, NORM_MINMAX);
+	normalize(correspondenceConfidence, correspondenceConfidence, 0, 1, NORM_MINMAX);
+	normalize(depth, depth, 0, 1, NORM_MINMAX);
+	normalize(image, image, 0, 1, NORM_MINMAX);
+
 	string window1 = "depth from defocus";
 	namedWindow(window1, WINDOW_NORMAL);
 	imshow(window1, maxDefocusResponse);
 
-	normalize(minCorrespondenceResponse, minCorrespondenceResponse, 0, 1, NORM_MINMAX);
 	string window2 = "depth from correspondence";
 	namedWindow(window2, WINDOW_NORMAL);
 	imshow(window2, minCorrespondenceResponse);
 
-	normalize(defocusConfidence, defocusConfidence, 0, 1, NORM_MINMAX);
 	string window3 = "confidence from defocus";
 	namedWindow(window3, WINDOW_NORMAL);
 	imshow(window3, defocusConfidence);
 
-	normalize(correspondenceConfidence, correspondenceConfidence, 0, 1, NORM_MINMAX);
 	string window4 = "confidence from correspondence";
 	namedWindow(window4, WINDOW_NORMAL);
 	imshow(window4, correspondenceConfidence);
 
-	//renderer->setFocalLength(?);
-	Mat image = renderer->renderImage();
 	string window5 = "central perspective";
 	namedWindow(window5, WINDOW_NORMAL);
 	imshow(window5, image);
 
-	waitKey(0);
+	string window6 = "combined depth map";
+	namedWindow(window6, WINDOW_NORMAL);
+	imshow(window6, depth);
 
-	// 3) global operation to combine cues
-	Mat depth = mrf(maxDefocusResponse, minCorrespondenceResponse,
-		defocusConfidence, correspondenceConfidence);
+	waitKey(0);
 
 	return depth;
 }
@@ -285,9 +300,31 @@ Mat CDCDepthEstimator::getFirstExtremum(Mat extrema)
 }
 
 
+Mat CDCDepthEstimator::pickDepthWithMaxConfidence(Mat depth1, Mat depth2, Mat confidence1, Mat confidence2)
+{
+	Mat depth = Mat(depth1.size(), CV_32FC1);
+	typedef float elementType;
+	MatIterator_<elementType> itd0, itd1, itd2, itc1, itc2, end1;
+    for (
+		itd0 = depth.begin<elementType>(),
+		itd1 = depth1.begin<elementType>(),
+		itd2 = depth2.begin<elementType>(),
+		itc1 = confidence1.begin<elementType>(),
+		itc2 = confidence2.begin<elementType>(),
+		end1 = depth1.end<elementType>();
+		itd1 != end1; ++itd0, ++itd1, ++itd2, ++itc1, ++itc2 )
+    {
+		*itd0 = (*itc1 > *itc2) ? *itd1 : *itd2;
+	}
+
+	return depth;
+}
+
+
 Mat CDCDepthEstimator::mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confidence2)
 {
 	// TODO ...
-	Mat depth;
+
+	Mat depth = Mat(depth1.size(), CV_32FC1);
 	return depth;
 }
