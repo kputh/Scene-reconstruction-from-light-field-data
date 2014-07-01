@@ -1,6 +1,7 @@
 #pragma once
 
-#include "depthestimator.h"
+#include "ImageRenderer.h"
+#include "DepthEstimator.h"
 
 /**
  * Implementation of the depth estimation algorithm described by Tao, Hadap,
@@ -28,11 +29,19 @@ class CDCDepthEstimator :
 	static const Mat DEFOCUS_WINDOW;
 	static const Mat CORRESPONDENCE_WINDOW;
 
-	Mat calculateDefocusResponse(LightFieldPicture lightfield, float alpha);
-	Mat calculateCorrespondenceResponse(LightFieldPicture lightfield, float alpha);
+	typedef Vec2f fPair;
+
+	ImageRenderer* renderer;
+
+	void addAlphaData(Mat& response, float alpha);
+	void calculateDefocusResponse(LightFieldPicture lightfield, Mat& response,
+		float alpha);
+	void calculateCorrespondenceResponse(LightFieldPicture lightfield,
+		Mat& response, float alpha);
 	Mat argMaxAlpha(vector<Mat> responses);
 	Mat argMinAlpha(vector<Mat> responses);
 	Mat calculateConfidence(Mat extrema);
+	Mat getFirstExtremum(Mat extrema);
 	Mat mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confidence2);
 public:
 	CDCDepthEstimator(void);

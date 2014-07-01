@@ -15,6 +15,7 @@
 #include "ImageRenderer3.h"
 #include "StereoBMDisparityEstimator.h"
 #include "DepthEstimator1.h"
+#include "CDCDepthEstimator.h"
 
 using namespace cv;
 using namespace std;
@@ -29,13 +30,18 @@ int main( int argc, char** argv )
 
     Mat rawImage, subapertureImage, image1, image2, image4, image14;
 	try {
-		double t = (double)getTickCount();
+		double t0 = (double)getTickCount();
 
 		LightFieldPicture lf(argv[1]);
+
+		double t1 = (double)getTickCount();
+		double d0 = (t1 - t0) / getTickFrequency();
 		cout << "Loading of file at " << argv[1] << " successful." << endl;
+		cout << "Loading of light field took " << d0 << " seconds." << endl;
 	
-		DepthEstimator1 estimator = DepthEstimator1();
-		image1 = estimator.estimateDepth(lf);
+		DepthEstimator* estimator = new CDCDepthEstimator;
+		image1 = estimator->estimateDepth(lf);
+
 		/*
 		ImageRenderer3 renderer = ImageRenderer3();
 		renderer.setLightfield(lf);
@@ -93,15 +99,13 @@ int main( int argc, char** argv )
 		}
 		*/
 
-		t = ((double)getTickCount() - t)/getTickFrequency();
-		cout << "Times passed in seconds: " << t << endl;
 	} catch (std::exception* e) {
 		cerr << e->what() << endl;
 		return -1;
 	}
 
 	//saveImageToPNGFile(string(argv[1]) + string(".png"), image1);
-	cin.ignore();
+	//cin.ignore();
 	// show image
     //namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display. (original size)
     

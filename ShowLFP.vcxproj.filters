@@ -54,10 +54,10 @@
     <ClCompile Include="DepthEstimator1.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="DCDepthEstimator.cpp">
+    <ClCompile Include="LightFieldPicture.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="LightFieldPicture.cpp">
+    <ClCompile Include="CDCDepthEstimator.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
@@ -101,7 +101,7 @@
     <ClInclude Include="LightFieldPicture.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="DCDepthEstimator.h">
+    <ClInclude Include="CDCDepthEstimator.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

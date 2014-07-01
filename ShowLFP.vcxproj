@@ -97,7 +97,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\Users\Kai\Downloads\rapidjson-0.11\rapidjson\include\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -140,7 +140,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="DCDepthEstimator.cpp" />
+    <ClCompile Include="CDCDepthEstimator.cpp" />
     <ClCompile Include="DepthEstimator.cpp" />
     <ClCompile Include="DepthEstimator1.cpp" />
     <ClCompile Include="ImageRenderer.cpp" />
@@ -157,7 +157,7 @@
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="DCDepthEstimator.h" />
+    <ClInclude Include="CDCDepthEstimator.h" />
     <ClInclude Include="DepthEstimator.h" />
     <ClInclude Include="DepthEstimator1.h" />
     <ClInclude Include="ImageRenderer.h" />

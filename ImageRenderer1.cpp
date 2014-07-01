@@ -25,8 +25,8 @@ Mat ImageRenderer1::renderImage()
 	const double weight = 1.0 - 1.0 / alpha;
 	const Size saSize = Size(this->lightfield.SPARTIAL_RESOLUTION.width,
 		this->lightfield.SPARTIAL_RESOLUTION.height);
-	const Size imageSize = Size(saSize.width + this->lightfield.ANGULAR_RESOLUTION.width * uvScale[0] * weight,
-		saSize.height + this->lightfield.ANGULAR_RESOLUTION.height * uvScale[1] * weight);
+	const Size imageSize = Size(saSize.width + abs(ceil(this->lightfield.ANGULAR_RESOLUTION.width * uvScale[0] * weight)),
+		saSize.height + abs(ceil(this->lightfield.ANGULAR_RESOLUTION.height * uvScale[1] * weight)));
 	const int imageType = CV_MAKETYPE(CV_32F, this->lightfield.getRawImage().channels() + 1);
 	Mat image = Mat::zeros(imageSize, imageType);
 
@@ -47,7 +47,7 @@ Mat ImageRenderer1::renderImage()
 
 			compositeImage = appendRayCountingChannel(subapertureImage);
 
-			translation	= (Vec2d(u * uvScale[0], v * uvScale[1]) - angularCorrection) * weight;
+			translation	= (Vec2d(u, v) - angularCorrection).mul(uvScale) * weight;
 			dstCorner	= dstCenter + translation + fromCenterToCorner;
 			dstRect		= Rect(Point(round(dstCorner[0]), round(dstCorner[1])), saSize);
 			dstROI		= Mat(image, dstRect);
@@ -56,8 +56,13 @@ Mat ImageRenderer1::renderImage()
 		}
 	}
 
+	// cut image to spartial resolution
+	Vec2f scrCorner	= dstCenter + fromCenterToCorner;
+	Rect srcRect	= Rect(Point(round(scrCorner[0]), round(scrCorner[1])), saSize);
+	Mat srcROI		= Mat(image, srcRect);
+
 	// scale luminance/color values to fit inside [0, 1]
-	Mat normalizedImage = normalizeByRayCount(image);
+	Mat normalizedImage = normalizeByRayCount(srcROI);
 
 	return normalizedImage;
 }
