@@ -2,6 +2,14 @@
 #include <vector>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>	// debug
+// Markov Random Field minimization library
+#include "mrf.h"
+//#include "ICM.h"
+//#include "GCoptimization.h"
+#include "MaxProdBP.h"
+//#include "TRW-S.h"
+//#include "BP-S.h"
+
 #include "ImageRenderer1.h"
 #include "CDCDepthEstimator.h"
 
@@ -320,9 +328,46 @@ Mat CDCDepthEstimator::pickDepthWithMaxConfidence(Mat depth1, Mat depth2, Mat co
 	return depth;
 }
 
+MRF::CostVal dCost(int pix, int i)
+{
+    return ((pix*i + i + pix) % 30) / ((MRF::CostVal) 3);
+}
+
+MRF::CostVal fnCost(int pix1, int pix2, int i, int j)
+{
+    if (pix2 < pix1) { // ensure that fnCost(pix1, pix2, i, j) == fnCost(pix2, pix1, j, i)
+	int tmp;
+	tmp = pix1; pix1 = pix2; pix2 = tmp; 
+	tmp = i; i = j; j = tmp;
+    }
+    MRF::CostVal answer = (pix1*(i+1)*(j+2) + pix2*i*j*pix1 - 2*i*j*pix1) % 100;
+    return answer / 10;
+}
 
 Mat CDCDepthEstimator::mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confidence2)
 {
+	MRF* mrf;
+	EnergyFunction *energy;
+	float time;
+
+	// TODO dCost und fnCost definieren
+	DataCost *data         = new DataCost(dCost);
+	SmoothnessCost *smooth = new SmoothnessCost(fnCost);
+	energy = new EnergyFunction(data,smooth);
+
+	mrf = new MaxProdBP(sizeX, sizeY, numLabels, energy);
+	mrf->initialize();
+	mrf->clearAnswer();
+	    
+	// TODO abort: see paper
+	// while (?)
+	for (int iter = 0; iter < 10; iter++) {
+		// TODO update images
+		mrf->optimize(1, time);
+	}
+	    
+	delete mrf;
+
 	// TODO ...
 
 	Mat depth = Mat(depth1.size(), CV_32FC1);
