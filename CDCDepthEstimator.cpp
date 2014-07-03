@@ -2,14 +2,8 @@
 #include <vector>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <opencv2/highgui/highgui.hpp>	// debug
-// Markov Random Field minimization library
 #include "mrf.h"
-//#include "ICM.h"
-//#include "GCoptimization.h"
 #include "MaxProdBP.h"
-//#include "TRW-S.h"
-//#include "BP-S.h"
-
 #include "ImageRenderer1.h"
 #include "CDCDepthEstimator.h"
 
@@ -19,6 +13,8 @@ const float CDCDepthEstimator::ALPHA_MAX					= 2.0;
 const float CDCDepthEstimator::ALPHA_STEP					= 0.1;//0.007;
 const Size CDCDepthEstimator::DEFOCUS_WINDOW_SIZE			= Size(9, 9);
 const Size CDCDepthEstimator::CORRESPONDENCE_WINDOW_SIZE	= Size(9, 9);
+const float CDCDepthEstimator::LAMBDA_SOURCE[] = { 1, 1 };
+
 
 const int CDCDepthEstimator::DDEPTH					= -1;
 const Point CDCDepthEstimator::WINDOW_CENTER		= Point (-1, -1);
@@ -75,12 +71,12 @@ Mat CDCDepthEstimator::estimateDepth(const LightFieldPicture lightfield)
 	Mat minCorrespondenceResponse = getFirstExtremum(minCorrespondenceResponses);
 
 	// 3) global operation to combine cues
-	/*
 	Mat depth = mrf(maxDefocusResponse, minCorrespondenceResponse,
 		defocusConfidence, correspondenceConfidence);
-	*/
+	/*
 	Mat depth = pickDepthWithMaxConfidence(maxDefocusResponse,
 		minCorrespondenceResponse, defocusConfidence, correspondenceConfidence);
+	*/
 
 	// 4) compute actual depth from focal length
 	// TODO
@@ -328,20 +324,69 @@ Mat CDCDepthEstimator::pickDepthWithMaxConfidence(Mat depth1, Mat depth2, Mat co
 	return depth;
 }
 
-MRF::CostVal dCost(int pix, int i)
+
+MRF::CostVal dataCost(int pix, MRF::Label i)
 {
-    return ((pix*i + i + pix) % 30) / ((MRF::CostVal) 3);
+	return 0;
+	/*
+	float innerSum = 0;
+	for (int i2 = 0; i2 < 2; i2++)
+		innerSum += Wsource[i2][pix] * abs(Zsource[i][pix] - Zsource[i2][pix]);
+
+    return LAMBDA_SOURCE[i] * innerSum;
+	*/
 }
 
-MRF::CostVal fnCost(int pix1, int pix2, int i, int j)
+
+MRF::CostVal fnCost(int pix1, int pix2, MRF::Label i, MRF::Label j)
 {
-    if (pix2 < pix1) { // ensure that fnCost(pix1, pix2, i, j) == fnCost(pix2, pix1, j, i)
-	int tmp;
-	tmp = pix1; pix1 = pix2; pix2 = tmp; 
-	tmp = i; i = j; j = tmp;
+	return 0;
+	/*
+	// ensure that fnCost(pix1, pix2, i, j) == fnCost(pix2, pix1, j, i)
+    if (pix2 < pix1) {
+		int tmpPix;
+		MRF::Label tmpLabel;
+		tmpPix = pix1; pix1 = pix2; pix2 = tmpPix; 
+		tmpLabel = i; i = j; j = tmpLabel;
     }
+
+	// generate partial derivatives and Laplace image
+	int width = depth1.size().width;
+	int x1 = pix1 % width;
+	int y1 = pix1 / width;
+	int x2 = pix2 % width;
+	int y2 = pix2 / width;
+	Vec2i position1 = Vec2i(x1, y1);
+	Vec2i position2 = Vec2i(x2, y2);
+	Vec2i windowCornerPosition = position1 + Vec2i(-1, -1);
+	Mat srcImage = (confidence1.at<float>(position1) <
+		confidence2.at<float>(position2)) ? depth1 : depth2;
+
+	Mat srcROI = Mat(srcImage, Rect(windowCornerPosition, 3, 3));
+	srcROI.copyTo(srcROI);
+
+	srcROI.at<float>(position1 - windowConrerPosition) = i;
+	srcROI.at<float>(position2 - windowConrerPosition) = j;
+
+	Mat gradientX gradientY;
+	Sobel(srcROI, gradientX, -1, 1, 0);
+	Sobel(srcROI, gradientY, -1, 0, 1);
+
+	float flatness = labdaFlatness * (abs(gradientX.at<float>(position1)) + abs(gradientX.at<float>(position1)));
+
+	Mat laplace;
+	Laplace(srcROI, laplace);
+	float smoothness = lambdaSmoothness * abs(lambda.at<float>(position1));
+	...
+
+	/*
+	float cost = lambdaFlat * abs((i - j) / (x1, x2)) + abs((i - j) / (y1 - y2)) +
+		lambdaSmooth * abs(?);
+	*/
+	/*
     MRF::CostVal answer = (pix1*(i+1)*(j+2) + pix2*i*j*pix1 - 2*i*j*pix1) % 100;
     return answer / 10;
+	*/
 }
 
 Mat CDCDepthEstimator::mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confidence2)
@@ -350,26 +395,37 @@ Mat CDCDepthEstimator::mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confiden
 	EnergyFunction *energy;
 	float time;
 
+	Mat aDiffs, weighed1, weighed2;
+	absdiff(depth1, depth2, aDiffs);
+	multiply(aDiffs, confidence2, weighed1);
+	multiply(aDiffs, confidence1, weighed2);
+	// TODO * lambda_source ?
+
+	vector<float> dataCost1, dataCost2;
+	weighed1.copyTo(dataCost1);
+	weighed2.copyTo(dataCost2);
+	dataCost1.insert(dataCost1.end(), dataCost2.begin(), dataCost2.end());
+
 	// TODO dCost und fnCost definieren
-	DataCost *data         = new DataCost(dCost);
+	DataCost *data         = new DataCost(&dataCost1[0]);
 	SmoothnessCost *smooth = new SmoothnessCost(fnCost);
 	energy = new EnergyFunction(data,smooth);
 
-	mrf = new MaxProdBP(sizeX, sizeY, numLabels, energy);
+	mrf = new MaxProdBP(depth1.size().width, depth1.size().height, 2, energy);
 	mrf->initialize();
 	mrf->clearAnswer();
 	    
+	mrf->optimize(1, time);
+	/*
 	// TODO abort: see paper
-	// while (?)
-	for (int iter = 0; iter < 10; iter++) {
+	while (?)
 		// TODO update images
 		mrf->optimize(1, time);
 	}
+	*/
 	    
+	Mat optimizedDepth = Mat(depth1.size(), CV_32FC1, mrf->getAnswerPtr());
 	delete mrf;
 
-	// TODO ...
-
-	Mat depth = Mat(depth1.size(), CV_32FC1);
-	return depth;
+	return optimizedDepth;
 }

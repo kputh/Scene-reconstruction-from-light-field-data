@@ -60,6 +60,12 @@
     <ClCompile Include="CDCDepthEstimator.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="RGBDMerger.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="RGBDMerger1.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="lfpsplitter.h">
@@ -102,6 +108,12 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="CDCDepthEstimator.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="RGBDMerger.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="RGBDMerger1.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>

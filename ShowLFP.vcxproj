@@ -96,13 +96,14 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\Users\Kai\Downloads\rapidjson-0.11\rapidjson\include\;C:\Users\Kai\Downloads\MRF2.2\MRF2.2\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Kai\Documents\Visual Studio 2010\Projects\ShowLFP\ShowLFP\libs\rapidjson\;C:\Users\Kai\Documents\Visual Studio 2010\Projects\ShowLFP\ShowLFP\libs\MRF2.2;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>ws2_32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -153,6 +154,8 @@
     <ClCompile Include="LightFieldPicture.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="NormalDistribution.cpp" />
+    <ClCompile Include="RGBDMerger.cpp" />
+    <ClCompile Include="RGBDMerger1.cpp" />
     <ClCompile Include="StereoBMDisparityEstimator.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
@@ -169,6 +172,8 @@
     <ClInclude Include="LightField.h" />
     <ClInclude Include="LightFieldPicture.h" />
     <ClInclude Include="NormalDistribution.h" />
+    <ClInclude Include="RGBDMerger.h" />
+    <ClInclude Include="RGBDMerger1.h" />
     <ClInclude Include="StereoBMDisparityEstimator.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
