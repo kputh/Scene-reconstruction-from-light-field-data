@@ -1,6 +1,5 @@
 #pragma once
 
-#include "rapidjson/document.h"
 #include <opencv2/core/core.hpp>
 
 using namespace cv;

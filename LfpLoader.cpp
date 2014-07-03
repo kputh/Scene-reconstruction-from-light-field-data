@@ -1,6 +1,6 @@
 #include "LfpLoader.h"
 #include "lfpsplitter.c"
-#include "rapidjson/document.h"
+#include "document.h"
 #include <iostream>
 #include <opencv2/imgproc/imgproc.hpp>
 
