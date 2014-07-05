@@ -13,8 +13,10 @@ const float CDCDepthEstimator::ALPHA_MAX					= 2.0;
 const float CDCDepthEstimator::ALPHA_STEP					= 0.1;//0.007;
 const Size CDCDepthEstimator::DEFOCUS_WINDOW_SIZE			= Size(9, 9);
 const Size CDCDepthEstimator::CORRESPONDENCE_WINDOW_SIZE	= Size(9, 9);
-const float CDCDepthEstimator::LAMBDA_SOURCE[] = { 1, 1 };
-
+const float CDCDepthEstimator::LAMBDA_SOURCE[]				= { 1, 1 };
+const float CDCDepthEstimator::LAMBDA_FLAT					= 2;
+const float CDCDepthEstimator::LAMBDA_SMOOTH				= 2;
+const double CDCDepthEstimator::CONVERGENCE_FRACTION		= 1;
 
 const int CDCDepthEstimator::DDEPTH					= -1;
 const Point CDCDepthEstimator::WINDOW_CENTER		= Point (-1, -1);
@@ -23,6 +25,8 @@ const Mat CDCDepthEstimator::DEFOCUS_WINDOW			= Mat(DEFOCUS_WINDOW_SIZE,
 	CV_32F, Scalar(1.0 / DEFOCUS_WINDOW_SIZE.area()));
 const Mat CDCDepthEstimator::CORRESPONDENCE_WINDOW	= Mat(DEFOCUS_WINDOW_SIZE,
 	CV_32F, Scalar(1.0 / CORRESPONDENCE_WINDOW_SIZE.area()));
+
+vector<float> CDCDepthEstimator::fsCost[2];
 
 
 CDCDepthEstimator::CDCDepthEstimator(void)
@@ -70,6 +74,7 @@ Mat CDCDepthEstimator::estimateDepth(const LightFieldPicture lightfield)
 	Mat maxDefocusResponse = getFirstExtremum(maxDefocusResponses);
 	Mat minCorrespondenceResponse = getFirstExtremum(minCorrespondenceResponses);
 
+	cout << "Schritt 3" << endl;
 	// 3) global operation to combine cues
 	Mat depth = mrf(maxDefocusResponse, minCorrespondenceResponse,
 		defocusConfidence, correspondenceConfidence);
@@ -85,11 +90,12 @@ Mat CDCDepthEstimator::estimateDepth(const LightFieldPicture lightfield)
 	//renderer->setFocalLength(?);
 	Mat image = renderer->renderImage();
 	// TODO Werte sind auﬂerhalb des erwarteten Bereichs DEBUGGEN!!!
-	normalize(maxDefocusResponse, maxDefocusResponse, 0, 1, NORM_MINMAX);
-	normalize(minCorrespondenceResponse, minCorrespondenceResponse, 0, 1, NORM_MINMAX);
-	normalize(defocusConfidence, defocusConfidence, 0, 1, NORM_MINMAX);
-	normalize(correspondenceConfidence, correspondenceConfidence, 0, 1, NORM_MINMAX);
-	normalize(depth, depth, 0, 1, NORM_MINMAX);
+
+	//normalize(maxDefocusResponse, maxDefocusResponse, 0, 1, NORM_MINMAX);
+	//normalize(minCorrespondenceResponse, minCorrespondenceResponse, 0, 1, NORM_MINMAX);
+	//normalize(defocusConfidence, defocusConfidence, 0, 1, NORM_MINMAX);
+	//normalize(correspondenceConfidence, correspondenceConfidence, 0, 1, NORM_MINMAX);
+	//normalize(depth, depth, 0, 1, NORM_MINMAX);
 	normalize(image, image, 0, 1, NORM_MINMAX);
 
 	string window1 = "depth from defocus";
@@ -283,6 +289,7 @@ Mat CDCDepthEstimator::argMinAlpha(vector<Mat> responses)
 }
 
 
+// peak ratio confidence
 Mat CDCDepthEstimator::calculateConfidence(Mat extrema)
 {
 	vector<Mat> channels;
@@ -325,68 +332,9 @@ Mat CDCDepthEstimator::pickDepthWithMaxConfidence(Mat depth1, Mat depth2, Mat co
 }
 
 
-MRF::CostVal dataCost(int pix, MRF::Label i)
+MRF::CostVal CDCDepthEstimator::fnCost(int pix1, int pix2, MRF::Label i, MRF::Label j)
 {
-	return 0;
-	/*
-	float innerSum = 0;
-	for (int i2 = 0; i2 < 2; i2++)
-		innerSum += Wsource[i2][pix] * abs(Zsource[i][pix] - Zsource[i2][pix]);
-
-    return LAMBDA_SOURCE[i] * innerSum;
-	*/
-}
-
-
-MRF::CostVal fnCost(int pix1, int pix2, MRF::Label i, MRF::Label j)
-{
-	return 0;
-	/*
-	// ensure that fnCost(pix1, pix2, i, j) == fnCost(pix2, pix1, j, i)
-    if (pix2 < pix1) {
-		int tmpPix;
-		MRF::Label tmpLabel;
-		tmpPix = pix1; pix1 = pix2; pix2 = tmpPix; 
-		tmpLabel = i; i = j; j = tmpLabel;
-    }
-
-	// generate partial derivatives and Laplace image
-	int width = depth1.size().width;
-	int x1 = pix1 % width;
-	int y1 = pix1 / width;
-	int x2 = pix2 % width;
-	int y2 = pix2 / width;
-	Vec2i position1 = Vec2i(x1, y1);
-	Vec2i position2 = Vec2i(x2, y2);
-	Vec2i windowCornerPosition = position1 + Vec2i(-1, -1);
-	Mat srcImage = (confidence1.at<float>(position1) <
-		confidence2.at<float>(position2)) ? depth1 : depth2;
-
-	Mat srcROI = Mat(srcImage, Rect(windowCornerPosition, 3, 3));
-	srcROI.copyTo(srcROI);
-
-	srcROI.at<float>(position1 - windowConrerPosition) = i;
-	srcROI.at<float>(position2 - windowConrerPosition) = j;
-
-	Mat gradientX gradientY;
-	Sobel(srcROI, gradientX, -1, 1, 0);
-	Sobel(srcROI, gradientY, -1, 0, 1);
-
-	float flatness = labdaFlatness * (abs(gradientX.at<float>(position1)) + abs(gradientX.at<float>(position1)));
-
-	Mat laplace;
-	Laplace(srcROI, laplace);
-	float smoothness = lambdaSmoothness * abs(lambda.at<float>(position1));
-	...
-
-	/*
-	float cost = lambdaFlat * abs((i - j) / (x1, x2)) + abs((i - j) / (y1 - y2)) +
-		lambdaSmooth * abs(?);
-	*/
-	/*
-    MRF::CostVal answer = (pix1*(i+1)*(j+2) + pix2*i*j*pix1 - 2*i*j*pix1) % 100;
-    return answer / 10;
-	*/
+	return fsCost[i][pix2];
 }
 
 Mat CDCDepthEstimator::mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confidence2)
@@ -394,37 +342,90 @@ Mat CDCDepthEstimator::mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confiden
 	MRF* mrf;
 	EnergyFunction *energy;
 	float time;
-
+	
+	// pre-calculate data cost
 	Mat aDiffs, weighed1, weighed2;
 	absdiff(depth1, depth2, aDiffs);
 	multiply(aDiffs, confidence2, weighed1);
 	multiply(aDiffs, confidence1, weighed2);
-	// TODO * lambda_source ?
+	weighed1 *= LAMBDA_SOURCE[0];
+	weighed2 *= LAMBDA_SOURCE[1];
 
+	// save data cost in a single array
 	vector<float> dataCost1, dataCost2;
-	weighed1.copyTo(dataCost1);
-	weighed2.copyTo(dataCost2);
+	weighed1.reshape(0, 1).copyTo(dataCost1);
+	weighed2.reshape(0, 1).copyTo(dataCost2);
 	dataCost1.insert(dataCost1.end(), dataCost2.begin(), dataCost2.end());
 
-	// TODO dCost und fnCost definieren
+	// pre-calculate flatness + smoothness cost
+	Mat gradientX, gradientY, laplacian, flatnessCost, smoothnessCost, totalFSCost;
+	Sobel(depth1, gradientX, -1, 1, 0);
+	Sobel(depth1, gradientY, -1, 0, 1);
+	add(abs(gradientX), abs(gradientY), flatnessCost);
+	Laplacian(depth1, laplacian, CV_32F);
+	smoothnessCost = abs(laplacian) * LAMBDA_SMOOTH;
+	totalFSCost = smoothnessCost + flatnessCost;
+	totalFSCost.reshape(0, 1).copyTo(fsCost[0]);
+
+	Sobel(depth2, gradientX, -1, 1, 0);
+	Sobel(depth2, gradientY, -1, 0, 1);
+	add(abs(gradientX), abs(gradientY), flatnessCost);
+	Laplacian(depth1, laplacian, CV_32F);
+	smoothnessCost = abs(laplacian) * LAMBDA_SMOOTH;
+	totalFSCost = smoothnessCost + flatnessCost;
+	totalFSCost.reshape(0, 1).copyTo(fsCost[1]);
+
+	// define/generate complete cost function
 	DataCost *data         = new DataCost(&dataCost1[0]);
-	SmoothnessCost *smooth = new SmoothnessCost(fnCost);
+	SmoothnessCost *smooth = new SmoothnessCost(&CDCDepthEstimator::fnCost);
 	energy = new EnergyFunction(data,smooth);
 
+	// compute optimized depth map (labeling)
 	mrf = new MaxProdBP(depth1.size().width, depth1.size().height, 2, energy);
 	mrf->initialize();
 	mrf->clearAnswer();
-	    
-	mrf->optimize(1, time);
-	/*
-	// TODO abort: see paper
-	while (?)
-		// TODO update images
-		mrf->optimize(1, time);
-	}
-	*/
-	    
-	Mat optimizedDepth = Mat(depth1.size(), CV_32FC1, mrf->getAnswerPtr());
+	
+	// perform optimization
+	Mat newLabels, tmp;
+	//Mat cLabels = Mat(depth1.size(), CV_8UC1, mrf->getAnswerPtr());
+	//Mat currentLabels;
+	Mat oldLabels = Mat(depth1.size(), CV_32FC1, Scalar(2));
+	double rootMeanSquareDeviation;
+	int pixelCount = depth1.size().area();
+	do {
+	//for (int i = 0; i < 100; i++) {
+		// perform more optimization
+		mrf->optimize(1, time);	// TODO use constant
+
+		// calculate root-mean-square deviation
+		newLabels = Mat(depth1.size(), CV_8UC1, mrf->getAnswerPtr()); // kann die gleiche Mat kann in jedem Durchgang benutzt werden?
+		newLabels.convertTo(newLabels, CV_32F);
+		//cLabels.convertTo(currentLabels, CV_32F);
+		tmp = newLabels - oldLabels;
+		//tmp = currentLabels - oldLabels;
+		multiply(tmp, tmp, tmp);
+		rootMeanSquareDeviation = std::sqrt(sum(tmp)[0] / (double) pixelCount);
+		
+		// debugging
+		cout << "sum(abs(newLabels - oldLabels))[0] = " << sum(abs(newLabels - oldLabels))[0] << " (0 indicates identity)" << endl;
+		cout << "sum(newLabels)[0] = " << sum(newLabels)[0] << endl;
+
+		newLabels.copyTo(oldLabels);
+		//currentLabels.copyTo(oldLabels);
+		
+		// debugging
+		cout << "rootMeanSquareDeviation = " << rootMeanSquareDeviation << endl;
+		MRF::EnergyVal E_smooth = mrf->smoothnessEnergy();
+		MRF::EnergyVal E_data   = mrf->dataEnergy();
+		printf("Total Energy = %d (Smoothness energy %d, Data Energy %d)\n", E_smooth+E_data,E_smooth,E_data);
+
+	} while (rootMeanSquareDeviation > CONVERGENCE_FRACTION);
+
+	// translate label map into depth map
+	Mat optimizedDepth = Mat::zeros(depth1.size(), depth1.type());
+	accumulateProduct(depth1, abs(newLabels - 1), optimizedDepth);
+	accumulateProduct(depth2, newLabels, optimizedDepth);
+
 	delete mrf;
 
 	return optimizedDepth;
