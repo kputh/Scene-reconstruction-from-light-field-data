@@ -34,9 +34,6 @@ class CDCDepthEstimator :
 	static const Mat DEFOCUS_WINDOW;
 	static const Mat CORRESPONDENCE_WINDOW;
 
-	// variables for MRF propagation
-	static vector<float> fsCost[2];
-
 	typedef Vec2f fPair;
 	
 	ImageRenderer* renderer;
