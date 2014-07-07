@@ -19,7 +19,7 @@ class CDCDepthEstimator :
 	// parameters of the algorithm
 	static const float ALPHA_MIN;
 	static const float ALPHA_MAX;
-	static const float ALPHA_STEP;
+	static const int DEPTH_RESOLUTION;
 	static const Size DEFOCUS_WINDOW_SIZE;
 	static const Size CORRESPONDENCE_WINDOW_SIZE;
 	static const float LAMBDA_SOURCE[];
@@ -43,13 +43,16 @@ class CDCDepthEstimator :
 
 	void addAlphaData(Mat& response, float alpha);
 	void calculateDefocusResponse(LightFieldPicture lightfield, Mat& response,
-		float alpha);
+		float alpha, Mat refocusedImage);
 	void calculateCorrespondenceResponse(LightFieldPicture lightfield,
-		Mat& response, float alpha);
-	Mat argMaxAlpha(vector<Mat> responses);
-	Mat argMinAlpha(vector<Mat> responses);
+		Mat& response, float alpha, Mat refocusedImage);
+	static bool isGreaterThan(float a, float b);
+	static bool isLesserThan(float a, float b);
+	static Mat argExtrAlpha(vector<Mat> responses, bool (*isExtr)(float,float),
+		const int responseChannelIndex);
 	Mat calculateConfidence(Mat extrema);
 	Mat getFirstExtremum(Mat extrema);
+	void normalizeConfidence(Mat& confidence1, Mat& confidence2);
 	Mat mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confidence2);
 	Mat pickDepthWithMaxConfidence(Mat depth1, Mat depth2, Mat confidence1,
 		Mat confidence2);
@@ -61,6 +64,6 @@ public:
 	CDCDepthEstimator(void);
 	~CDCDepthEstimator(void);
 
-	Mat estimateDepth(const LightFieldPicture lightfield);
+	Mat estimateDepth(LightFieldPicture lightfield);
 };
 
