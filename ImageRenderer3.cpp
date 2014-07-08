@@ -55,7 +55,7 @@ Mat ImageRenderer3::renderImage()
 	{
 		for(v = 0; v < this->lightfield.ANGULAR_RESOLUTION.height; v++)
 		{
-			subapertureImage = this->lightfield.getSubapertureImage(u, v);
+			subapertureImage = this->lightfield.getSubapertureImageI(u, v);	// TODO reelle Koodinaten verwenden
 			
 			subapertureImage *= apertureFunction.f(u * uvScale[0] - angularCorrection[0],
 				v * uvScale[1] - angularCorrection[1]);
@@ -73,7 +73,8 @@ Mat ImageRenderer3::renderImage()
 
 	// scale luminance/color values to fit inside [0, 1]
 	//Mat normalizedImage = normalizeByRayCount(image);
-	Mat normalizedImage = adjustLuminanceSpace(image);
+	adjustLuminanceSpace(image);
+	// TODO warum nicht CV::normalize()? Wenn ersetzbar, normalizeByRayCount() überflüssig
 
-	return normalizedImage;
+	return image;
 }

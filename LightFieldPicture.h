@@ -43,7 +43,7 @@ public:
 	luminanceType getSubpixelLuminance(unsigned short x, unsigned short y,
 		unsigned short u, unsigned short v);
 	luminanceType getLuminanceF(float x, float y, float u, float v);
-	Mat getSubapertureImage(const unsigned short u, const unsigned short v);
+	Mat getSubapertureImageI(const unsigned short u, const unsigned short v);
 	Mat getSubapertureImageF(const double u, const double v);
 	Mat getRawImage();
 

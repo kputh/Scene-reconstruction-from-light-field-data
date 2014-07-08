@@ -31,14 +31,29 @@ int main( int argc, char** argv )
     Mat rawImage, subapertureImage, image1, image2, image4, image14;
 	try {
 		double t0 = (double)getTickCount();
-
 		LightFieldPicture lf(argv[1]);
-
 		double t1 = (double)getTickCount();
+
 		double d0 = (t1 - t0) / getTickFrequency();
 		cout << "Loading of file at " << argv[1] << " successful." << endl;
 		cout << "Loading of light field took " << d0 << " seconds." << endl;
 	
+		ImageRenderer1 renderer = ImageRenderer1();
+		renderer.setLightfield(lf);
+		renderer.setFocalLength(0.0068200001716613766 * 1.5);
+
+		t0 = (double)getTickCount();
+		image1 = renderer.renderImage();
+		t1 = (double)getTickCount();
+
+		d0 = (t1 - t0) / getTickFrequency();
+		cout << "Rendering took " << d0 << " seconds." << endl;
+
+		string window1 = "refocused image";
+		namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
+		imshow(window1, image1);
+		waitKey(0);
+
 		DepthEstimator* estimator = new CDCDepthEstimator;
 		image1 = estimator->estimateDepth(lf);
 
@@ -66,6 +81,7 @@ int main( int argc, char** argv )
 		imshow(window1, image1);
 		
 		string window2 = "image2";
+
 		namedWindow(window2, WINDOW_NORMAL);// Create a window for display. (scale down size)
 		imshow(window2, image2);
 		

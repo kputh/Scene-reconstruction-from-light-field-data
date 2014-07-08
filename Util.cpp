@@ -14,6 +14,14 @@ double round(double value)
 	return (value < 0.0) ? ceil(value - 0.5) : floor(value + 0.5);
 }
 
+Vec2f round(Vec2f vector)
+{
+	for(int i = 0; i < vector.rows; i++)
+		vector[i] = round(vector[i]);
+
+	return vector;
+}
+
 double roundTo(double value, double target)
 {
 	return (value < target) ? ceil(value) : floor(value);
@@ -24,16 +32,13 @@ double roundToZero(double value)
 	return (value < 0.0) ? ceil(value) : floor(value);
 }
 
-Mat adjustLuminanceSpace(const Mat image)
+void adjustLuminanceSpace(Mat& image)	// ist das nicht identisch zu CV::normalize()?
 {
-	Mat floatImage;
 	double minValue, maxValue, scaleFactor, offset;
 	minMaxLoc(image, &minValue, &maxValue);
 	scaleFactor = 1.0 / (maxValue - minValue);
 	offset = - minValue * scaleFactor;
-	image.convertTo(floatImage, CV_32F, scaleFactor, offset);
-
-	return floatImage;
+	image.convertTo(image, CV_32F, scaleFactor, offset);
 }
 
 void saveImageToPNGFile(string fileName, Mat image)
@@ -78,34 +83,29 @@ void saveImageArc(LightFieldPicture lightfield, string sourceFileName, int image
 }
 
 
-Mat appendRayCountingChannel(Mat image)
+void appendRayCountingChannel(Mat& image)
 {
-	int compositeImageType = CV_MAKETYPE(image.depth(), image.channels() + 1);
-	int counterImageType = CV_MAKETYPE(image.depth(), 1);
-	Mat rayCount = Mat::ones(image.size(), counterImageType);
-	Mat compositeImage = Mat(image.size(), compositeImageType);
+	vector<Mat> channels;
+	split(image, channels);
 
-	Mat in[] = { image, rayCount };
-	Mat out[] = { compositeImage };
-	int from_to[] = { 0,0, 1,1, 2,2, 3,3 };
-	mixChannels( in, 2, out, 1, from_to, 4);
-
-	return compositeImage;
+	Mat rayCountChannel = Mat::ones(image.size(), channels[0].type());
+	channels.push_back(rayCountChannel);
+	
+	merge(channels, image);
 }
 
 
-Mat normalizeByRayCount(Mat image)
+void normalizeByRayCount(Mat& image)
 {
-	int imageType = CV_MAKETYPE(image.depth(), image.channels() - 1);
-	Mat rayCount = Mat(image.size(), imageType);
-	Mat normalizedImage = Mat(image.size(), imageType);
+	vector<Mat> channels;
+	split(image, channels);
 
-	Mat in[] = { image };
-	Mat out[] = { normalizedImage, rayCount };
-	int from_to[] = { 0,0, 1,1, 2,2, 3,3, 3,4, 3,5 };
-	mixChannels( in, 1, out, 2, from_to, 6);
+	int rayCountChannelIndex = channels.size() - 1;
+	for (int i = 0; i < rayCountChannelIndex; i++)
+	{
+		divide(channels[i], channels[rayCountChannelIndex], channels[i]);
+	}
+	channels.pop_back();
 
-	divide(normalizedImage, rayCount, normalizedImage);
-
-	return normalizedImage;
+	merge(channels, image);
 }

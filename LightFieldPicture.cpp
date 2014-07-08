@@ -129,6 +129,7 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 
 	// process raw image
 	Mat demosaicedImage	= this->demosaicImage(loader.bayerImage);
+	demosaicedImage.convertTo(demosaicedImage, IMAGE_TYPE, 1.0 / 65535.0);
 	Mat rectifiedImage	= this->rectifyLensGrid(demosaicedImage, loader); // TODO abschaffen?
 
 	this->rawImage	= rectifiedImage;
@@ -276,7 +277,7 @@ Mat LightFieldPicture::generateSubapertureImage(const unsigned short u, const un
 }
 
 
-Mat LightFieldPicture::getSubapertureImage(const unsigned short u, const unsigned short v)
+Mat LightFieldPicture::getSubapertureImageI(const unsigned short u, const unsigned short v)
 {
 	return this->subapertureImages[v * this->ANGULAR_RESOLUTION.width + u];
 }
@@ -284,10 +285,18 @@ Mat LightFieldPicture::getSubapertureImage(const unsigned short u, const unsigne
 
 Mat LightFieldPicture::getSubapertureImageF(const double u, const double v)
 {
-	Mat upperLeftImage	= this->subapertureImages[floor(v) * this->ANGULAR_RESOLUTION.width + floor(u)];
-	Mat lowerLeftImage	= this->subapertureImages[ceil(v) * this->ANGULAR_RESOLUTION.width + floor(u)];
-	Mat upperRightImage	= this->subapertureImages[floor(v) * this->ANGULAR_RESOLUTION.width + ceil(u)];
-	Mat lowerRightImage	= this->subapertureImages[ceil(v) * this->ANGULAR_RESOLUTION.width + ceil(u)];
+	// TODO Koordinaten außerhalb des Linsenbildes besser behandeln
+	const int minAngle = 0;
+	const int maxAngle = ANGULAR_RESOLUTION.width - 1;
+	int fu = min(maxAngle, max(minAngle, (int) floor(u)));
+	int cu = min(maxAngle, max(minAngle, (int) ceil(u)));
+	int fv = min(maxAngle, max(minAngle, (int) floor(v)));
+	int cv = min(maxAngle, max(minAngle, (int) ceil(v)));
+
+	Mat upperLeftImage	= this->subapertureImages[fv * this->ANGULAR_RESOLUTION.width + fu];
+	Mat lowerLeftImage	= this->subapertureImages[cv * this->ANGULAR_RESOLUTION.width + fu];
+	Mat upperRightImage	= this->subapertureImages[fv * this->ANGULAR_RESOLUTION.width + cu];
+	Mat lowerRightImage	= this->subapertureImages[cv * this->ANGULAR_RESOLUTION.width + cu];
 
 	float lowerWeight	= v - floor(v);
 	float upperWeight	= 1.0 - lowerWeight;

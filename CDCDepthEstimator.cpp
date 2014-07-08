@@ -168,7 +168,7 @@ void CDCDepthEstimator::calculateCorrespondenceResponse(
 	for (v = 0; v < lightfield.ANGULAR_RESOLUTION.height; v++)
 		for (u = 0; u < lightfield.ANGULAR_RESOLUTION.width; u++)
 		{
-			subapertureImage = lightfield.getSubapertureImage(u, v);
+			subapertureImage = lightfield.getSubapertureImageI(u, v); // TODO reelle Koordinaten verwenden
 			cvtColor(subapertureImage, subapertureImage, CV_RGB2GRAY);	// TODO anders lösen
 			differenceImage = subapertureImage - refocusedImage; // FEHLER sub-aperture image muss verschoben sein
 			multiply(differenceImage, differenceImage, squaredDifference);
