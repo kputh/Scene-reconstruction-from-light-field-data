@@ -28,9 +28,6 @@ Mat ImageRenderer3::renderImage()
 	NormalDistribution apertureFunction = NormalDistribution(x0, y0,
 		standardDeviation1, standardDeviation2);
 
-	const double F		= this->lightfield.getRawFocalLength();	// focal length of the raw image
-	const double alpha	= focalLength / F;
-
 	const Vec2f uvScale = Vec2f(1.0, 1.0 / cos(M_PI / 6.0));
 
 	const double weight = 1.0 - 1.0 / alpha;

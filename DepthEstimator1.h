@@ -3,7 +3,7 @@
 class DepthEstimator1 :
 	public DepthEstimator
 {
-	static const float FOCAL_LENGTH;
+	static const float ALPHA;
 public:
 	DepthEstimator1(void);
 	~DepthEstimator1(void);

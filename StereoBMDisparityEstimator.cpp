@@ -5,7 +5,7 @@
 #include "ImageRenderer3.h"
 
 
-const float StereoBMDisparityEstimator::FOCAL_LENGTH	= 0.0068200001716613766;
+const float StereoBMDisparityEstimator::ALPHA			= 1.0;
 const Vec2i StereoBMDisparityEstimator::LEFT_POSITION	= Vec2i(0,0);
 const Vec2i StereoBMDisparityEstimator::RIGHT_POSITION	= Vec2i(5,0);
 
@@ -25,7 +25,7 @@ Mat StereoBMDisparityEstimator::estimateDepth(const LightFieldPicture lightfield
 	// render images
 	ImageRenderer3 renderer = ImageRenderer3();
 	renderer.setLightfield(lightfield);
-	renderer.setFocalLength(StereoBMDisparityEstimator::FOCAL_LENGTH);
+	renderer.setAlpha(ALPHA);
 
 	renderer.setPinholePosition(StereoBMDisparityEstimator::LEFT_POSITION);
 	Mat image1 = renderer.renderImage();

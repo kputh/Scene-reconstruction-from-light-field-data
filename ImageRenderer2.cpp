@@ -14,8 +14,7 @@ ImageRenderer2::~ImageRenderer2(void)
 
 Mat ImageRenderer2::renderImage()
 {
-	const double F		= this->lightfield.getRawFocalLength();	// focal length of the raw image
-	const double beta	= focalLength / F;
+	float beta = alpha;
 
 	const int imageType = CV_MAKETYPE(CV_32F, this->lightfield.getRawImage().channels());
 	Mat image(this->lightfield.SPARTIAL_RESOLUTION, imageType);

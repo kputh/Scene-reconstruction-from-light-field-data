@@ -17,9 +17,6 @@ ImageRenderer1::~ImageRenderer1(void)
 
 Mat ImageRenderer1::renderImageI()
 {
-	const double F		= this->lightfield.getRawFocalLength();	// focal length of the raw image
-	const double alpha	= focalLength / F;
-
 	const Vec2f uvScale = Vec2f(1.0, 1.0 / cos(M_PI / 6.0));
 
 	const double weight = 1.0 - 1.0 / alpha;
@@ -70,9 +67,6 @@ Mat ImageRenderer1::renderImageI()
 
 Mat ImageRenderer1::renderImage()
 {
-	const double F		= this->lightfield.getRawFocalLength();	// focal length of the raw image
-	const double alpha	= focalLength / F;
-
 	const Vec2f uvScale = Vec2f(1.0, 1.0 / cos(M_PI / 6.0));
 
 	const double weight = 1.0 - 1.0 / alpha;

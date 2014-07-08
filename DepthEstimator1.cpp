@@ -6,7 +6,7 @@
 #include "DepthEstimator1.h"
 
 
-const float DepthEstimator1::FOCAL_LENGTH = 0.0068200001716613766;
+const float DepthEstimator1::ALPHA = 1.0;
 
 
 DepthEstimator1::DepthEstimator1(void)
@@ -39,7 +39,7 @@ Mat DepthEstimator1::estimateDepth(const LightFieldPicture lightfield)
 	// render images
 	ImageRenderer3 renderer = ImageRenderer3();
 	renderer.setLightfield(lightfield);
-	renderer.setFocalLength(DepthEstimator1::FOCAL_LENGTH);
+	renderer.setAlpha(ALPHA);
 
 	const Vec2i leftPosition = Vec2i(-5,0);
 	renderer.setPinholePosition(leftPosition);

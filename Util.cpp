@@ -58,10 +58,10 @@ void saveImageArc(LightFieldPicture lightfield, string sourceFileName, int image
 {
 	float angle, x, y;
 	float radius = 4;
-	float f = 0.0068200001716613766;
+	float alpha = 1.0;
 
 	ImageRenderer3 renderer = ImageRenderer3();
-	renderer.setFocalLength(f);
+	renderer.setAlpha(alpha);
 	renderer.setLightfield(lightfield);
 
 	sourceFileName.erase(sourceFileName.end() - 4, sourceFileName.end());

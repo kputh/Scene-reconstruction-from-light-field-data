@@ -5,7 +5,7 @@
 class StereoBMDisparityEstimator :
 	public DepthEstimator
 {
-	static const float FOCAL_LENGTH;
+	static const float ALPHA;
 	static const Vec2i LEFT_POSITION;
 	static const Vec2i RIGHT_POSITION;
 

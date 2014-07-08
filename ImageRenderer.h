@@ -18,7 +18,7 @@ class ImageRenderer
 {
 protected:
 	LightFieldPicture lightfield;
-	double focalLength;
+	float alpha;
 	Vec2i pinholePosition;
 public:
 	ImageRenderer(void);
@@ -26,8 +26,8 @@ public:
 
 	LightFieldPicture getLightfield();
 	void setLightfield(LightFieldPicture lightfield);
-	double getFocalLength();
-	void setFocalLength(double focalLength);
+	float getAlpha();
+	void setAlpha(float alpha);
 	Vec2i getPinholePosition();
 	void setPinholePosition(Vec2i pinholePosition);
 

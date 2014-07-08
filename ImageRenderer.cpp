@@ -23,15 +23,15 @@ void ImageRenderer::setLightfield(LightFieldPicture lightfield)
 }
 
 
-double ImageRenderer::getFocalLength()
+float ImageRenderer::getAlpha()
 {
-	return this->focalLength;
+	return this->alpha;
 }
 
 
-void ImageRenderer::setFocalLength(double focalLength)
+void ImageRenderer::setAlpha(float alpha)
 {
-	this->focalLength = focalLength;
+	this->alpha = alpha;
 }
 
 
