@@ -2,11 +2,13 @@
 
 #include <string>
 #include <opencv2/core/core.hpp>
+#include <opencv2/ocl/ocl.hpp>
 #include "lightfield.h"
 #include "LfpLoader.h"
 
 using namespace std;
 using namespace cv;
+using namespace ocl;
 
 /**
  * The data structure for a light field from a Light Field Picture (*.lfp) file.
@@ -25,7 +27,7 @@ class LightFieldPicture /*:
 
 	LfpLoader loader;
 	Mat rawImage;
-	vector<Mat> subapertureImages;
+	vector<oclMat> subapertureImages;
 
 	static Mat demosaicImage(const Mat bayerImage);
 	static Mat rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoader metadata);
@@ -43,8 +45,8 @@ public:
 	luminanceType getSubpixelLuminance(unsigned short x, unsigned short y,
 		unsigned short u, unsigned short v);
 	luminanceType getLuminanceF(float x, float y, float u, float v);
-	Mat getSubapertureImageI(const unsigned short u, const unsigned short v);
-	Mat getSubapertureImageF(const double u, const double v);
+	oclMat getSubapertureImageI(const unsigned short u, const unsigned short v);
+	oclMat getSubapertureImageF(const double u, const double v);
 	Mat getRawImage();
 
 	double getRawFocalLength();

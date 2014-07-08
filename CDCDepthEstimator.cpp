@@ -50,11 +50,9 @@ Mat CDCDepthEstimator::estimateDepth(LightFieldPicture lightfield)
 	this->renderer->setLightfield(lightfield);
 	const float alphaStep = (ALPHA_MAX - ALPHA_MIN) / (float) DEPTH_RESOLUTION;
 	Mat refocusedImage, response;
-	double newFocalLength;
 	for (float alpha = ALPHA_MIN; alpha <= ALPHA_MAX; alpha += alphaStep)
 	{
-		newFocalLength = alpha * lightfield.getRawFocalLength();
-		this->renderer->setFocalLength(newFocalLength);	// TODO direkt alpha ¸bergeben
+		this->renderer->setAlpha(alpha);
 		refocusedImage = this->renderer->renderImage();
 		cvtColor(refocusedImage, refocusedImage, CV_RGB2GRAY);	// TODO anders lˆsen
 
@@ -101,7 +99,6 @@ Mat CDCDepthEstimator::estimateDepth(LightFieldPicture lightfield)
 	// TODO/debug save to attributes
 	//renderer->setFocalLength(?);
 	Mat image = renderer->renderImage();
-	// TODO Werte sind auﬂerhalb des erwarteten Bereichs DEBUGGEN!!!
 
 	//normalize(maxDefocusResponse, maxDefocusResponse, 0, 1, NORM_MINMAX);
 	//normalize(minCorrespondenceResponse, minCorrespondenceResponse, 0, 1, NORM_MINMAX);

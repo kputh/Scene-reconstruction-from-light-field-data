@@ -2,6 +2,7 @@
 
 #include <string>
 #include <opencv2/core/core.hpp>
+#include <opencv2/ocl/ocl.hpp>
 
 #include "LightFieldPicture.h"
 
@@ -15,3 +16,5 @@ void saveImageArc(LightFieldPicture lightfield, string sourceFileName,
 	int imageCount);
 void appendRayCountingChannel(Mat& image);
 void normalizeByRayCount(Mat& image);
+void appendRayCountingChannel(oclMat& image);
+void normalizeByRayCount(oclMat& image);

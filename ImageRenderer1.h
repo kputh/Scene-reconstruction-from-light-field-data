@@ -1,5 +1,6 @@
 #pragma once
 
+#include <opencv2/ocl/ocl.hpp>
 #include "ImageRenderer.h"
 
 /**
@@ -20,7 +21,7 @@ public:
 	ImageRenderer1(void);
 	~ImageRenderer1(void);
 
-	Mat renderImageI();
-	Mat renderImage();
+	oclMat renderImageI();
+	oclMat renderImageOCL();
 };
 

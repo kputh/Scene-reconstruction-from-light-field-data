@@ -1,8 +1,7 @@
 #define _USE_MATH_DEFINES	// for math constants in C++
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp> // ToDo remove
-#include <opencv2/calib3d/calib3d.hpp> // ToDo remove
+#include <opencv2/ocl/ocl.hpp>
 #include <cmath>
 #include <string>
 #include <iostream>
@@ -22,13 +21,14 @@ using namespace std;
 
 int main( int argc, char** argv )
 {
-    if( argc != 2)
+    if(argc != 2)
     {
-     cout <<" Usage: display_image ImageToLoadAndDisplay" << endl;
-     return -1;
+		cout << "Usage: display_image ImageToLoadAndDisplay" << endl;
+		return -1;
     }
 
-    Mat rawImage, subapertureImage, image1, image2, image4, image14;
+	Mat rawImage, subapertureImage, image1, image2, image4, image14;
+	oclMat ocl1;
 	try {
 		double t0 = (double)getTickCount();
 		LightFieldPicture lf(argv[1]);
@@ -40,23 +40,25 @@ int main( int argc, char** argv )
 	
 		ImageRenderer1 renderer = ImageRenderer1();
 		renderer.setLightfield(lf);
-		renderer.setFocalLength(0.0068200001716613766 * 1.5);
+		renderer.setAlpha(1.5);
 
 		t0 = (double)getTickCount();
-		image1 = renderer.renderImage();
+		ocl1 = renderer.renderImageOCL();
 		t1 = (double)getTickCount();
 
 		d0 = (t1 - t0) / getTickFrequency();
 		cout << "Rendering took " << d0 << " seconds." << endl;
-
+		
+		ocl1.download(image1);
 		string window1 = "refocused image";
 		namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
 		imshow(window1, image1);
 		waitKey(0);
-
+		
+/*
 		DepthEstimator* estimator = new CDCDepthEstimator;
 		image1 = estimator->estimateDepth(lf);
-
+*/
 		/*
 		ImageRenderer3 renderer = ImageRenderer3();
 		renderer.setLightfield(lf);
@@ -114,7 +116,7 @@ int main( int argc, char** argv )
 			}
 		}
 		*/
-
+	
 	} catch (std::exception* e) {
 		cerr << e->what() << endl;
 		return -1;
@@ -135,6 +137,7 @@ int main( int argc, char** argv )
     imshow( "1.0x", image1 );                   // Show our image inside it.
 	*/
 
-	waitKey(0);                                          // Wait for a keystroke in the window
+	//waitKey(0);                                          // Wait for a keystroke in the window
+
     return 0;
 }

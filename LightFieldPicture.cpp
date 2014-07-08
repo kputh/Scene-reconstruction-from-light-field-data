@@ -4,6 +4,7 @@
 #include <iostream>	// debug
 #include <opencv2/core/core.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/ocl/ocl.hpp>
 #include "Util.h"
 #include "LfpLoader.h"
 #include "LightFieldPicture.h"
@@ -136,13 +137,13 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 
 	// generate all sub-aperture images
 	size_t saImageCount = this->ANGULAR_RESOLUTION.width * this->ANGULAR_RESOLUTION.height;
-	this->subapertureImages = vector<Mat>(saImageCount);
+	this->subapertureImages = vector<oclMat>(saImageCount);
 	int u, v, index = 0;
 	for (v = 0; v < this->ANGULAR_RESOLUTION.height; v++)
 	{
 		for (u = 0; u < this->ANGULAR_RESOLUTION.width; u++)
 		{
-			this->subapertureImages[index] = this->generateSubapertureImage(u, v);
+			this->subapertureImages[index] = oclMat(this->generateSubapertureImage(u, v));
 			index++;
 		}
 	}
@@ -270,20 +271,20 @@ Mat LightFieldPicture::generateSubapertureImage(const unsigned short u, const un
 	for (y = 0; y < this->SPARTIAL_RESOLUTION.height; y++)
 		for (x = 0; x < this->SPARTIAL_RESOLUTION.width; x++)
 		{
-			subapertureImage(Point(x, y)) = this->getLuminance(x, y, u, v);
+			subapertureImage.at<luminanceType>(y, x) = this->getLuminance(x, y, u, v);
 		}
 
 	return subapertureImage;
 }
 
 
-Mat LightFieldPicture::getSubapertureImageI(const unsigned short u, const unsigned short v)
+oclMat LightFieldPicture::getSubapertureImageI(const unsigned short u, const unsigned short v)
 {
 	return this->subapertureImages[v * this->ANGULAR_RESOLUTION.width + u];
 }
 
 
-Mat LightFieldPicture::getSubapertureImageF(const double u, const double v)
+oclMat LightFieldPicture::getSubapertureImageF(const double u, const double v)
 {
 	// TODO Koordinaten außerhalb des Linsenbildes besser behandeln
 	const int minAngle = 0;
@@ -293,10 +294,10 @@ Mat LightFieldPicture::getSubapertureImageF(const double u, const double v)
 	int fv = min(maxAngle, max(minAngle, (int) floor(v)));
 	int cv = min(maxAngle, max(minAngle, (int) ceil(v)));
 
-	Mat upperLeftImage	= this->subapertureImages[fv * this->ANGULAR_RESOLUTION.width + fu];
-	Mat lowerLeftImage	= this->subapertureImages[cv * this->ANGULAR_RESOLUTION.width + fu];
-	Mat upperRightImage	= this->subapertureImages[fv * this->ANGULAR_RESOLUTION.width + cu];
-	Mat lowerRightImage	= this->subapertureImages[cv * this->ANGULAR_RESOLUTION.width + cu];
+	oclMat upperLeftImage	= this->subapertureImages[fv * this->ANGULAR_RESOLUTION.width + fu];
+	oclMat lowerLeftImage	= this->subapertureImages[cv * this->ANGULAR_RESOLUTION.width + fu];
+	oclMat upperRightImage	= this->subapertureImages[fv * this->ANGULAR_RESOLUTION.width + cu];
+	oclMat lowerRightImage	= this->subapertureImages[cv * this->ANGULAR_RESOLUTION.width + cu];
 
 	float lowerWeight	= v - floor(v);
 	float upperWeight	= 1.0 - lowerWeight;
@@ -308,8 +309,12 @@ Mat LightFieldPicture::getSubapertureImageF(const double u, const double v)
 	float upperRightWeight	= upperWeight * rightWeight;
 	float lowerRightWeight	= lowerWeight * rightWeight;
 
-	return upperLeftImage * upperLeftWeight + upperRightImage * upperRightWeight +
-		lowerLeftImage * lowerLeftWeight + lowerRightImage * lowerRightWeight;
+	oclMat leftSum, rightSum, totalSum;
+	ocl::addWeighted(upperLeftImage, upperLeftWeight, lowerLeftImage, lowerLeftWeight, 0, leftSum);
+	ocl::addWeighted(upperRightImage, upperRightWeight, lowerRightImage, lowerRightWeight, 0, rightSum);
+	ocl::add(leftSum, rightSum, totalSum);
+
+	return totalSum;
 }
 
 
