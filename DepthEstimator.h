@@ -1,6 +1,6 @@
 #pragma once
 
-#include <opencv2/core/core.hpp>
+#include <opencv2/ocl/ocl.hpp>
 #include "LightFieldPicture.h"
 
 /**
@@ -17,6 +17,6 @@ public:
 	DepthEstimator(void);
 	~DepthEstimator(void);
 
-	virtual Mat estimateDepth(const LightFieldPicture lightfield) =0;
+	virtual oclMat estimateDepth(const LightFieldPicture& lightfield) =0;
 };
 

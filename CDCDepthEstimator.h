@@ -38,21 +38,20 @@ class CDCDepthEstimator :
 	
 	ImageRenderer* renderer;
 
-	void addAlphaData(Mat& response, float alpha);
-	void calculateDefocusResponse(LightFieldPicture lightfield, Mat& response,
-		float alpha, Mat refocusedImage);
-	void calculateCorrespondenceResponse(LightFieldPicture lightfield,
-		Mat& response, float alpha, Mat refocusedImage);
-	static bool isGreaterThan(float a, float b);
-	static bool isLesserThan(float a, float b);
-	static Mat argExtrAlpha(vector<Mat> responses, bool (*isExtr)(float,float),
-		const int responseChannelIndex);
-	Mat calculateConfidence(Mat extrema);
-	Mat getFirstExtremum(Mat extrema);
-	void normalizeConfidence(Mat& confidence1, Mat& confidence2);
-	Mat mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confidence2);
-	Mat pickDepthWithMaxConfidence(Mat depth1, Mat depth2, Mat confidence1,
-		Mat confidence2);
+	void addAlphaData(oclMat& response, float alpha);
+	void calculateDefocusResponse(const LightFieldPicture& lightfield,
+		oclMat& response, float alpha, const oclMat& refocusedImage);
+	void calculateCorrespondenceResponse(const LightFieldPicture& lightfield,
+		oclMat& response, float alpha, const oclMat& refocusedImage);
+	oclMat argMaxAlpha(const vector<oclMat>& responses) const;
+	oclMat argMinAlpha(const vector<oclMat>& responses) const;
+	oclMat calculateConfidence(const oclMat& extrema);
+	oclMat getFirstExtremum(const oclMat& extrema);
+	void normalizeConfidence(oclMat& confidence1, oclMat& confidence2);
+	oclMat mrf(const oclMat& depth1, const oclMat& depth2,
+		const oclMat& confidence1, const oclMat& confidence2);
+	Mat pickDepthWithMaxConfidence(Mat& depth1, Mat& depth2,
+		Mat& confidence1, Mat& confidence2);
 
 	static MRF::CostVal dataCost(int pix, MRF::Label i);
 	static MRF::CostVal fnCost(int pix1, int pix2, MRF::Label i, MRF::Label j);
@@ -61,6 +60,6 @@ public:
 	CDCDepthEstimator(void);
 	~CDCDepthEstimator(void);
 
-	Mat estimateDepth(LightFieldPicture lightfield);
+	oclMat estimateDepth(const LightFieldPicture& lightfield);
 };
 

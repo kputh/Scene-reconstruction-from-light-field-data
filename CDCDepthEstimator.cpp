@@ -22,10 +22,11 @@ const double CDCDepthEstimator::CONVERGENCE_FRACTION		= 1;
 const int CDCDepthEstimator::DDEPTH					= -1;
 const Point CDCDepthEstimator::WINDOW_CENTER		= Point (-1, -1);
 const int CDCDepthEstimator::BORDER_TYPE			= BORDER_DEFAULT; // TODO 
-const Mat CDCDepthEstimator::DEFOCUS_WINDOW			= Mat(DEFOCUS_WINDOW_SIZE,
-	CV_32F, Scalar(1.0 / DEFOCUS_WINDOW_SIZE.area()));
-const Mat CDCDepthEstimator::CORRESPONDENCE_WINDOW	= Mat(
-	CORRESPONDENCE_WINDOW_SIZE, CV_32F,
+const Mat CDCDepthEstimator::DEFOCUS_WINDOW
+	= Mat(DEFOCUS_WINDOW_SIZE, CV_32F,
+	Scalar(1 / (float) DEFOCUS_WINDOW_SIZE.area()));
+const Mat CDCDepthEstimator::CORRESPONDENCE_WINDOW
+	= Mat(CORRESPONDENCE_WINDOW_SIZE, CV_32F,
 	Scalar(1 / (float) CORRESPONDENCE_WINDOW_SIZE.area()));
 
 
@@ -40,23 +41,23 @@ CDCDepthEstimator::~CDCDepthEstimator(void)
 }
 
 
-Mat CDCDepthEstimator::estimateDepth(LightFieldPicture lightfield)
+oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 {
 	cout << "Schritt 1" << endl;
 	// initialize Da, Ca
-	vector<Mat> responses;
+	vector<oclMat> responses;
 
 	// 1) for each shear, compute depth response
 	this->renderer->setLightfield(lightfield);
 	const float alphaStep = (ALPHA_MAX - ALPHA_MIN) / (float) DEPTH_RESOLUTION;
-	Mat refocusedImage, response;
+	oclMat refocusedImage, response;
 	for (float alpha = ALPHA_MIN; alpha <= ALPHA_MAX; alpha += alphaStep)
 	{
 		this->renderer->setAlpha(alpha);
 		refocusedImage = this->renderer->renderImage();
-		cvtColor(refocusedImage, refocusedImage, CV_RGB2GRAY);	// TODO anders lösen
+		ocl::cvtColor(refocusedImage, refocusedImage, CV_RGB2GRAY);	// TODO anders lösen
 
-		response = Mat(lightfield.SPARTIAL_RESOLUTION, CV_32FC3,
+		response = oclMat(lightfield.SPARTIAL_RESOLUTION, CV_32FC3,
 			Scalar(0, 0, alpha));
 
 		calculateDefocusResponse(lightfield, response, alpha, refocusedImage);
@@ -68,28 +69,26 @@ Mat CDCDepthEstimator::estimateDepth(LightFieldPicture lightfield)
 	cout << "Schritt 2" << endl;
 	// 2) for each pixel, compute response optimum
 	// find maximum defocus response per pixel
-	Mat maxDefocusResponses			= argExtrAlpha(responses,
-		&CDCDepthEstimator::isGreaterThan, 0);
+	oclMat maxDefocusResponses			= argMaxAlpha(responses);
 	// find minimum corresponcence response per pixel
-	Mat minCorrespondenceResponses	= argExtrAlpha(responses,
-		&CDCDepthEstimator::isLesserThan, 1);
+	oclMat minCorrespondenceResponses	= argMinAlpha(responses);
 
-	Mat defocusConfidence			= calculateConfidence(maxDefocusResponses);
-	Mat correspondenceConfidence	= calculateConfidence(minCorrespondenceResponses);
+	oclMat defocusConfidence			= calculateConfidence(maxDefocusResponses);
+	oclMat correspondenceConfidence		= calculateConfidence(minCorrespondenceResponses);
 
 	// reduce to first extremum
-	Mat maxDefocusResponse = getFirstExtremum(maxDefocusResponses);
-	Mat minCorrespondenceResponse = getFirstExtremum(minCorrespondenceResponses);
+	oclMat maxDefocusResponse			= getFirstExtremum(maxDefocusResponses);
+	oclMat minCorrespondenceResponse	= getFirstExtremum(minCorrespondenceResponses);
 
 	// normalize confidence
 	normalizeConfidence(defocusConfidence, correspondenceConfidence);
 
 	cout << "Schritt 3" << endl;
 	// 3) global operation to combine cues
-	Mat depth = mrf(maxDefocusResponse, minCorrespondenceResponse,
+	oclMat depth = mrf(maxDefocusResponse, minCorrespondenceResponse,
 		defocusConfidence, correspondenceConfidence);
 	/*
-	Mat depth = pickDepthWithMaxConfidence(maxDefocusResponse,
+	oclMat depth = pickDepthWithMaxConfidence(maxDefocusResponse,
 		minCorrespondenceResponse, defocusConfidence, correspondenceConfidence);
 	*/
 
@@ -98,12 +97,12 @@ Mat CDCDepthEstimator::estimateDepth(LightFieldPicture lightfield)
 
 	// TODO/debug save to attributes
 	//renderer->setFocalLength(?);
-	Mat image = renderer->renderImage();
+	oclMat image = renderer->renderImage();
 
 	//normalize(maxDefocusResponse, maxDefocusResponse, 0, 1, NORM_MINMAX);
 	//normalize(minCorrespondenceResponse, minCorrespondenceResponse, 0, 1, NORM_MINMAX);
 	//normalize(depth, depth, 0, 1, NORM_MINMAX);
-	normalize(image, image, 0, 1, NORM_MINMAX);
+	//normalize(image, image, 0, 1, NORM_MINMAX);
 
 	string window1 = "depth from defocus";
 	namedWindow(window1, WINDOW_NORMAL);
@@ -135,154 +134,189 @@ Mat CDCDepthEstimator::estimateDepth(LightFieldPicture lightfield)
 }
 
 
-void CDCDepthEstimator::calculateDefocusResponse(LightFieldPicture lightfield,
-	Mat& response, float alpha, Mat refocusedImage)
+void CDCDepthEstimator::calculateDefocusResponse(const LightFieldPicture& lightfield,
+	oclMat& responses, float alpha, const oclMat& refocusedImage)
 {
-	vector<Mat> channels;
-	split(response, channels);
+	vector<oclMat> channels;
+	ocl::split(responses, channels);
 	const int i = 0;
 
-	Laplacian(refocusedImage, refocusedImage, CV_32F, DEFOCUS_WINDOW_SIZE.width, 1,
-		0, BORDER_TYPE);
-	filter2D(abs(refocusedImage), channels[i], DDEPTH, DEFOCUS_WINDOW,
+	oclMat response;
+	ocl::Laplacian(refocusedImage, response, CV_32F);
+	ocl::abs(response, response);
+	ocl::filter2D(response, channels[i], DDEPTH, DEFOCUS_WINDOW,
 		WINDOW_CENTER, 0, BORDER_TYPE);
 
-	merge(channels, response);
+	ocl::merge(channels, responses);
 }
 
 
 void CDCDepthEstimator::calculateCorrespondenceResponse(
-	LightFieldPicture lightfield, Mat& response, float alpha, Mat refocusedImage)
+	const LightFieldPicture& lightfield, oclMat& response, float alpha, const oclMat& refocusedImage)
 {
-	vector<Mat> channels;
-	split(response, channels);
+	vector<oclMat> channels;
+	ocl::split(response, channels);
 	const int i = 1;
 
-	Mat subapertureImage, differenceImage, squaredDifference;
-	Mat variance = Mat::zeros(lightfield.SPARTIAL_RESOLUTION, CV_32FC1);
+	oclMat subapertureImage, differenceImage, squaredDifference;
+	oclMat variance = oclMat(lightfield.SPARTIAL_RESOLUTION, CV_32FC1, Scalar(0));
 
 	int u, v;
 	for (v = 0; v < lightfield.ANGULAR_RESOLUTION.height; v++)
 		for (u = 0; u < lightfield.ANGULAR_RESOLUTION.width; u++)
 		{
 			subapertureImage = lightfield.getSubapertureImageI(u, v); // TODO reelle Koordinaten verwenden
-			cvtColor(subapertureImage, subapertureImage, CV_RGB2GRAY);	// TODO anders lösen
-			differenceImage = subapertureImage - refocusedImage; // FEHLER sub-aperture image muss verschoben sein
-			multiply(differenceImage, differenceImage, squaredDifference);
-			variance += squaredDifference;
+			ocl::cvtColor(subapertureImage, subapertureImage, CV_RGB2GRAY);	// TODO anders lösen
+			ocl::subtract(subapertureImage, refocusedImage, differenceImage);	// FEHLER sub-aperture image muss verschoben sein
+			ocl::multiply(differenceImage, differenceImage, squaredDifference);
+			ocl::add(variance, squaredDifference, variance);
 		}
-	variance /= lightfield.ANGULAR_RESOLUTION.area();
+	ocl::divide(lightfield.ANGULAR_RESOLUTION.area(), variance, variance);
 
-	Mat standardDeviation, confidence;
-	sqrt(variance, standardDeviation);
-	filter2D(standardDeviation, confidence, DDEPTH, CORRESPONDENCE_WINDOW,
+	oclMat standardDeviation, confidence;
+	ocl::pow(variance, 0.5, standardDeviation);	// es gibt kein ocl::sqrt()
+	ocl::filter2D(standardDeviation, confidence, DDEPTH, CORRESPONDENCE_WINDOW,
 		WINDOW_CENTER, 0, BORDER_TYPE);
 	
 	channels[i] = confidence;
-	merge(channels, response);
+	ocl::merge(channels, response);
 }
 
 
-bool CDCDepthEstimator::isGreaterThan(float a, float b)
-{
-	return a > b;
-}
-
-
-bool CDCDepthEstimator::isLesserThan(float a, float b)
-{
-	return a < b;
-}
-
-
-Mat CDCDepthEstimator::argExtrAlpha(vector<Mat> responses, bool (*isExtr)(float,float),
-	const int responseChannelIndex)
+oclMat CDCDepthEstimator::argMaxAlpha(const vector<oclMat>& responses) const
 {
 	typedef Vec3f elementType;	// (defocus response, correspondence response, alpha)
+	const int responseIndex = 0;	// index of defocus response
 
 	int height			= responses[0].size().height;
 	int width			= responses[0].size().width;
 	int responseCount	= responses.size();
 
-	Mat max1, max2;
+	oclMat matrix, max1, max2;
+	const oclMat multiplier = oclMat(responses[0].size(), responses[0].type(),
+		Scalar(1000, 1, 1, 1));
 	responses[0].copyTo(max1);
 	responses[0].copyTo(max2);
+	ocl::multiply(multiplier, max1, max1);
+	ocl::multiply(multiplier, max2, max2);
 
-	float response;
-	int x, y, responseIndex;
-	for (y = 0; y < height; y++)
-		for (x = 0; x < width; x++)
-			for (responseIndex = 1; responseIndex < responseCount; responseIndex++)
-			{
-				response = responses[responseIndex].at<elementType>(y, x)
-					[responseChannelIndex];
+	for (int responseIndex = 1; responseIndex < responseCount; responseIndex++)
+	{
+		ocl::multiply(responses[responseIndex], multiplier, matrix);
 
-				if (isExtr(response,
-						max1.at<elementType>(y, x)[responseChannelIndex]))
-					max1.at<elementType>(y, x) = responses[responseIndex].at<elementType>(y, x);
-				else if (isExtr(response,
-						max2.at<elementType>(y, x)[responseChannelIndex]))
-					max2.at<elementType>(y, x) = responses[responseIndex].at<elementType>(y, x);
-			}
+		// find first maximum
+		ocl::max(matrix, max1, max1);
+
+		// find second maximum
+		ocl::min(matrix, max1, matrix);
+		ocl::max(matrix, max2, max2);
+	}
 
 	// reduce to alpha values
-	Mat alphas = Mat(responses[0].size(), CV_32FC2);
-	Mat in[]		= { max1, max2 };
-	Mat out[]		= { alphas };
-	int from_to[]	= { 2,0, 5,1 };
-	mixChannels(in, 2, out, 1, from_to, 2);
+	vector<oclMat> channels1, channels2, resultChannels(2);
+
+	ocl::split(max1, channels1);
+	ocl::split(max2, channels2);
+
+	resultChannels[0] = channels1[2];
+	resultChannels[1] = channels2[2];
+
+	oclMat alphas;
+	ocl::merge(resultChannels, alphas);
+
+	return alphas;
+}
+
+
+oclMat CDCDepthEstimator::argMinAlpha(const vector<oclMat>& responses) const
+{
+	typedef Vec3f elementType;	// (defocus response, correspondence response, alpha)
+	const int responseIndex = 1;	// index of correspondence response
+
+	int height			= responses[0].size().height;
+	int width			= responses[0].size().width;
+	int responseCount	= responses.size();
+
+	oclMat matrix, min1, min2;
+	const oclMat multiplier = oclMat(responses[0].size(), responses[0].type(),
+		Scalar(1, 1000, 1, 1));
+	responses[0].copyTo(min1);
+	responses[0].copyTo(min2);
+	ocl::multiply(multiplier, min1, min1);
+	ocl::multiply(multiplier, min2, min2);
+
+	for (int responseIndex = 1; responseIndex < responseCount; responseIndex++)
+	{
+		ocl::multiply(responses[responseIndex], multiplier, matrix);
+
+		// find first maximum
+		ocl::min(matrix, min1, min1);
+
+		// find second maximum
+		ocl::max(matrix, min1, matrix);
+		ocl::min(matrix, min2, min2);
+	}
+
+	// reduce to alpha values
+	vector<oclMat> channels1, channels2, resultChannels(2);
+
+	ocl::split(min1, channels1);
+	ocl::split(min2, channels2);
+
+	resultChannels[0] = channels1[2];
+	resultChannels[1] = channels2[2];
+
+	oclMat alphas;
+	ocl::merge(resultChannels, alphas);
 
 	return alphas;
 }
 
 
 // peak ratio confidence
-Mat CDCDepthEstimator::calculateConfidence(Mat extrema)
+oclMat CDCDepthEstimator::calculateConfidence(const oclMat& extrema)
 {
-	vector<Mat> channels;
-	Mat confidence = Mat(extrema.size(), CV_32FC1);
+	vector<oclMat> channels;
+	oclMat confidence = oclMat(extrema.size(), CV_32FC1);
 
-	split(extrema, channels);
-	divide(channels[0], channels[1], confidence);
+	ocl::split(extrema, channels);
+	ocl::divide(channels[0], channels[1], confidence);
 
 	return confidence;
 }
 
 
-Mat CDCDepthEstimator::getFirstExtremum(Mat extrema)
+oclMat CDCDepthEstimator::getFirstExtremum(const oclMat& extrema)
 {
-	vector<Mat> channels;
-	split(extrema, channels);
+	vector<oclMat> channels;
+	ocl::split(extrema, channels);
 
 	return channels[0];
 }
 
 
-void CDCDepthEstimator::normalizeConfidence(Mat& confidence1, Mat& confidence2)
+void CDCDepthEstimator::normalizeConfidence(oclMat& confidence1, oclMat& confidence2)
 {
 	// find greatest confidence in both matrices combined
-	float maxConfidenceValue = -1;
-	MatIterator_<float> it, end;
-    for(it = confidence1.begin<float>(), end = confidence1.end<float>();
-			it != end; ++it)
-		if (*it > maxConfidenceValue)
-			maxConfidenceValue = *it;
-    for(it = confidence2.begin<float>(), end = confidence2.end<float>();
-			it != end; ++it)
-		if (*it > maxConfidenceValue)
-			maxConfidenceValue = *it;
+	oclMat maxConfidenceMat;
+	double minVal, maxVal;
 
-	confidence1 /= maxConfidenceValue;
-	confidence2 /= maxConfidenceValue;
+	ocl::max(confidence1, confidence2, maxConfidenceMat);
+	ocl::minMax(maxConfidenceMat, &minVal, &maxVal);
+
+	ocl::divide(maxVal, confidence1, confidence1);
+	ocl::divide(maxVal, confidence2, confidence2);
 }
 
 
-Mat CDCDepthEstimator::pickDepthWithMaxConfidence(Mat depth1, Mat depth2, Mat confidence1, Mat confidence2)
+// oclMar besitzt keinen Elementzugriff. Daher Mat verwenden oder eigenen Kernel entwickeln.
+Mat CDCDepthEstimator::pickDepthWithMaxConfidence(Mat& depth1,
+	Mat& depth2, Mat& confidence1, Mat& confidence2)
 {
 	Mat depth = Mat(depth1.size(), CV_32FC1);
 	typedef float elementType;
 	MatIterator_<elementType> itd0, itd1, itd2, itc1, itc2, end1;
-    for (
+	for (
 		itd0 = depth.begin<elementType>(),
 		itd1 = depth1.begin<elementType>(),
 		itd2 = depth2.begin<elementType>(),
@@ -290,7 +324,7 @@ Mat CDCDepthEstimator::pickDepthWithMaxConfidence(Mat depth1, Mat depth2, Mat co
 		itc2 = confidence2.begin<elementType>(),
 		end1 = depth1.end<elementType>();
 		itd1 != end1; ++itd0, ++itd1, ++itd2, ++itc1, ++itc2 )
-    {
+	{
 		*itd0 = (*itc1 > *itc2) ? *itd1 : *itd2;
 	}
 
@@ -304,7 +338,8 @@ MRF::CostVal CDCDepthEstimator::fnCost(int pix1, int pix2, MRF::Label i, MRF::La
 }
 
 
-Mat CDCDepthEstimator::mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confidence2)
+oclMat CDCDepthEstimator::mrf(const oclMat& depth1, const oclMat& depth2,
+	const oclMat& confidence1, const oclMat& confidence2)
 {
 	MRF* mrf;
 	EnergyFunction *energy;
@@ -312,36 +347,45 @@ Mat CDCDepthEstimator::mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confiden
 	
 	// pre-calculate cost
 	vector<float> dataCost1, dataCost2;
-	Mat aDiffs, gradientX, gradientY, laplacian, dataCost, flatnessCost, smoothnessCost, totalCost;
-	absdiff(depth1, depth2, aDiffs);
+	Mat tmpMat;
+	oclMat aDiffs, gradientX, gradientY, laplacian, dataCost, flatnessCost, smoothnessCost, totalCost;
+	ocl::absdiff(depth1, depth2, aDiffs);
 
 	// calculate cost for defocus solution
-	multiply(aDiffs, confidence2, dataCost);
+	ocl::multiply(aDiffs, confidence2, dataCost);
 	dataCost *= LAMBDA_SOURCE[0];
 
-	Sobel(depth1, gradientX, -1, 1, 0);
-	Sobel(depth1, gradientY, -1, 0, 1);
-	add(abs(gradientX), abs(gradientY), flatnessCost);
+	ocl::Sobel(depth1, gradientX, -1, 1, 0);
+	ocl::Sobel(depth1, gradientY, -1, 0, 1);
+	ocl::abs(gradientX, gradientX);
+	ocl::abs(gradientY, gradientY);
+	ocl::add(gradientX, gradientY, flatnessCost);
 
-	Laplacian(depth1, laplacian, CV_32F);
-	smoothnessCost = abs(laplacian) * LAMBDA_SMOOTH;
+	ocl::Laplacian(depth1, laplacian, CV_32F);
+	ocl::abs(laplacian, laplacian);
+	smoothnessCost = laplacian * LAMBDA_SMOOTH;
 
 	totalCost = dataCost + flatnessCost + smoothnessCost;
-	totalCost.reshape(0, 1).copyTo(dataCost1);
+	totalCost.download(tmpMat);
+	tmpMat.reshape(0, 1).copyTo(dataCost1);
 
 	// calculate cost for corresponence solution
-	multiply(aDiffs, confidence1, dataCost);
+	ocl::multiply(aDiffs, confidence1, dataCost);
 	dataCost *= LAMBDA_SOURCE[1];
 
-	Sobel(depth2, gradientX, -1, 1, 0);
-	Sobel(depth2, gradientY, -1, 0, 1);
-	add(abs(gradientX), abs(gradientY), flatnessCost);
+	ocl::Sobel(depth2, gradientX, -1, 1, 0);
+	ocl::Sobel(depth2, gradientY, -1, 0, 1);
+	ocl::abs(gradientX, gradientX);
+	ocl::abs(gradientY, gradientY);
+	ocl::add(gradientX, gradientY, flatnessCost);
 
-	Laplacian(depth2, laplacian, CV_32F);
-	smoothnessCost = abs(laplacian) * LAMBDA_SMOOTH;
+	ocl::Laplacian(depth2, laplacian, CV_32F);
+	ocl::abs(laplacian, laplacian);
+	smoothnessCost = laplacian * LAMBDA_SMOOTH;
 
 	totalCost = dataCost + flatnessCost + smoothnessCost;
-	totalCost.reshape(0, 1).copyTo(dataCost2);
+	totalCost.download(tmpMat);
+	tmpMat.reshape(0, 1).copyTo(dataCost2);
 
 	dataCost1.insert(dataCost1.end(), dataCost2.begin(), dataCost2.end());
 
@@ -357,12 +401,12 @@ Mat CDCDepthEstimator::mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confiden
 	
 	/*
 	// debugging
-    printf("Energy at the Start = %g (%g + %g)\n", (float)mrf->totalEnergy(),
+	printf("Energy at the Start = %g (%g + %g)\n", (float)mrf->totalEnergy(),
 	   (float)mrf->smoothnessEnergy(), (float)mrf->dataEnergy());
 	*/
 	// perform optimization
-	Mat newLabels, tmp;
-	Mat oldLabels = Mat(depth1.size(), CV_32FC1, Scalar(2));
+	oclMat newLabels, tmpOclMat;
+	oclMat oldLabels = oclMat(depth1.size(), CV_32FC1, Scalar(2));
 	double rootMeanSquareDeviation;
 	int pixelCount = depth1.size().area();
 	do {
@@ -370,11 +414,11 @@ Mat CDCDepthEstimator::mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confiden
 		mrf->optimize(1, time);	// TODO use constant
 
 		// calculate root-mean-square deviation
-		newLabels = Mat(depth1.size(), CV_8UC1, mrf->getAnswerPtr());
+		newLabels = oclMat(depth1.size(), CV_8UC1, mrf->getAnswerPtr());
 		newLabels.convertTo(newLabels, CV_32F);
-		tmp = newLabels - oldLabels;
-		multiply(tmp, tmp, tmp);
-		rootMeanSquareDeviation = std::sqrt(sum(tmp)[0] / (double) pixelCount);
+		tmpOclMat = newLabels - oldLabels;
+		ocl::multiply(tmpOclMat, tmpOclMat, tmpOclMat);
+		rootMeanSquareDeviation = std::sqrt(ocl::sum(tmpOclMat)[0] / (double) pixelCount);
 		
 		newLabels.copyTo(oldLabels);
 		
@@ -392,9 +436,12 @@ Mat CDCDepthEstimator::mrf(Mat depth1, Mat depth2, Mat confidence1, Mat confiden
 	imshow(window7, newLabels);
 	*/
 	// translate label map into depth map
-	Mat optimizedDepth = Mat::zeros(depth1.size(), depth1.type());
-	accumulateProduct(depth1, abs(newLabels - 1), optimizedDepth);
-	accumulateProduct(depth2, newLabels, optimizedDepth);
+	oclMat optimizedDepth;
+	tmpOclMat = newLabels - 1;
+	ocl::abs(tmpOclMat, tmpOclMat);
+	ocl::multiply(depth1, tmpOclMat, optimizedDepth);
+	ocl::multiply(depth2, newLabels, tmpOclMat);
+	optimizedDepth += tmpOclMat;
 
 	delete mrf;
 

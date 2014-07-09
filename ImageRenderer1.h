@@ -21,7 +21,6 @@ public:
 	ImageRenderer1(void);
 	~ImageRenderer1(void);
 
-	oclMat renderImageI();
-	oclMat renderImageOCL();
+	oclMat renderImage() const;
 };
 

@@ -18,7 +18,7 @@ ImageRenderer3::~ImageRenderer3(void)
 }
 
 
-Mat ImageRenderer3::renderImage()
+oclMat ImageRenderer3::renderImage() const
 {
 	int x0 = this->getPinholePosition()[0]; // TODO kann außerhalb des ML-Bilds liegen
 	int y0 = this->getPinholePosition()[1];
@@ -73,5 +73,5 @@ Mat ImageRenderer3::renderImage()
 	adjustLuminanceSpace(image);
 	// TODO warum nicht CV::normalize()? Wenn ersetzbar, normalizeByRayCount() überflüssig
 
-	return image;
+	return oclMat(image);
 }

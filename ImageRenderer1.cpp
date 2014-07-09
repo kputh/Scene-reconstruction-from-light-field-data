@@ -1,7 +1,5 @@
 #define _USE_MATH_DEFINES	// for math constants in C++
 
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/ocl/ocl.hpp>
 #include "Util.h"
 #include "ImageRenderer1.h"
 
@@ -16,13 +14,7 @@ ImageRenderer1::~ImageRenderer1(void)
 }
 
 
-Mat ImageRenderer1::renderImage()
-{
-	return Mat();
-}
-
-
-oclMat ImageRenderer1::renderImage()
+oclMat ImageRenderer1::renderImage() const
 {
 	const Vec2f uvScale = Vec2f(1.0, 1.0 / cos(M_PI / 6.0));
 

@@ -11,7 +11,7 @@ ImageRenderer::~ImageRenderer(void)
 }
 
 
-LightFieldPicture ImageRenderer::getLightfield()
+LightFieldPicture ImageRenderer::getLightfield() const
 {
 	return this->lightfield;
 }
@@ -23,7 +23,7 @@ void ImageRenderer::setLightfield(LightFieldPicture lightfield)
 }
 
 
-float ImageRenderer::getAlpha()
+float ImageRenderer::getAlpha() const
 {
 	return this->alpha;
 }
@@ -35,7 +35,7 @@ void ImageRenderer::setAlpha(float alpha)
 }
 
 
-Vec2i ImageRenderer::getPinholePosition()
+Vec2i ImageRenderer::getPinholePosition() const
 {
 	return this->pinholePosition;
 }

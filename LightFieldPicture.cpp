@@ -15,7 +15,7 @@ const LightFieldPicture::luminanceType LightFieldPicture::ZERO_LUMINANCE
 	= Vec3f(0, 0, 0);
 
 
-Mat LightFieldPicture::demosaicImage(const Mat bayerImage)
+Mat LightFieldPicture::demosaicImage(const Mat& bayerImage)
 {
 	Mat demosaicedImage(bayerImage.size(), CV_16UC3);
 	cvtColor(bayerImage, demosaicedImage, CV_BayerBG2RGB);
@@ -23,7 +23,8 @@ Mat LightFieldPicture::demosaicImage(const Mat bayerImage)
 }
 
 
-Mat LightFieldPicture::rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoader metadata)
+Mat LightFieldPicture::rectifyLensGrid(const Mat& hexagonalLensGrid,
+	const LfpLoader& metadata)
 {
 	Mat inputImage;
 	hexagonalLensGrid.convertTo(inputImage, IMAGE_TYPE);
@@ -156,7 +157,8 @@ LightFieldPicture::~LightFieldPicture(void)
 }
 
 
-LightFieldPicture::luminanceType LightFieldPicture::getLuminance(unsigned short x, unsigned short y, unsigned short u, unsigned short v)
+LightFieldPicture::luminanceType LightFieldPicture::getLuminance(
+	unsigned short x, unsigned short y, unsigned short u, unsigned short v) const
 {
 	// handle coordinates outside the recorded lightfield
 	const Point origin = Point(0, 0);
@@ -189,7 +191,7 @@ LightFieldPicture::luminanceType LightFieldPicture::getLuminance(unsigned short 
 
 
 LightFieldPicture::luminanceType LightFieldPicture::getSubpixelLuminance(
-	unsigned short x, unsigned short y, unsigned short u, unsigned short v)
+	unsigned short x, unsigned short y, unsigned short u, unsigned short v) const
 {
 	// handle coordinates outside the recorded lightfield
 	const Point origin = Point(0, 0);
@@ -222,7 +224,8 @@ LightFieldPicture::luminanceType LightFieldPicture::getSubpixelLuminance(
 }
 
 
-LightFieldPicture::luminanceType LightFieldPicture::getLuminanceF(float x, float y, float u, float v)
+LightFieldPicture::luminanceType LightFieldPicture::getLuminanceF(
+	float x, float y, float u, float v) const
 {
 	// handle coordinates outside the recorded lightfield
 	const float halfWidth = this->SPARTIAL_RESOLUTION.width / 2.0;
@@ -263,7 +266,8 @@ LightFieldPicture::luminanceType LightFieldPicture::getLuminanceF(float x, float
 }
 
 
-Mat LightFieldPicture::generateSubapertureImage(const unsigned short u, const unsigned short v)
+Mat LightFieldPicture::generateSubapertureImage(const unsigned short u,
+	const unsigned short v) const
 {
 	Mat_<luminanceType> subapertureImage(this->SPARTIAL_RESOLUTION, CV_32FC3);
 
@@ -271,20 +275,22 @@ Mat LightFieldPicture::generateSubapertureImage(const unsigned short u, const un
 	for (y = 0; y < this->SPARTIAL_RESOLUTION.height; y++)
 		for (x = 0; x < this->SPARTIAL_RESOLUTION.width; x++)
 		{
-			subapertureImage.at<luminanceType>(y, x) = this->getLuminance(x, y, u, v);
+			subapertureImage.at<luminanceType>(y, x) =
+				this->getLuminance(x, y, u, v);
 		}
 
 	return subapertureImage;
 }
 
 
-oclMat LightFieldPicture::getSubapertureImageI(const unsigned short u, const unsigned short v)
+oclMat LightFieldPicture::getSubapertureImageI(const unsigned short u,
+	const unsigned short v) const
 {
 	return this->subapertureImages[v * this->ANGULAR_RESOLUTION.width + u];
 }
 
 
-oclMat LightFieldPicture::getSubapertureImageF(const double u, const double v)
+oclMat LightFieldPicture::getSubapertureImageF(const double u, const double v) const
 {
 	// TODO Koordinaten außerhalb des Linsenbildes besser behandeln
 	const int minAngle = 0;
@@ -294,10 +300,14 @@ oclMat LightFieldPicture::getSubapertureImageF(const double u, const double v)
 	int fv = min(maxAngle, max(minAngle, (int) floor(v)));
 	int cv = min(maxAngle, max(minAngle, (int) ceil(v)));
 
-	oclMat upperLeftImage	= this->subapertureImages[fv * this->ANGULAR_RESOLUTION.width + fu];
-	oclMat lowerLeftImage	= this->subapertureImages[cv * this->ANGULAR_RESOLUTION.width + fu];
-	oclMat upperRightImage	= this->subapertureImages[fv * this->ANGULAR_RESOLUTION.width + cu];
-	oclMat lowerRightImage	= this->subapertureImages[cv * this->ANGULAR_RESOLUTION.width + cu];
+	oclMat upperLeftImage	= this->subapertureImages[
+		fv * this->ANGULAR_RESOLUTION.width + fu];
+	oclMat lowerLeftImage	= this->subapertureImages[
+		cv * this->ANGULAR_RESOLUTION.width + fu];
+	oclMat upperRightImage	= this->subapertureImages[
+		fv * this->ANGULAR_RESOLUTION.width + cu];
+	oclMat lowerRightImage	= this->subapertureImages[
+		cv * this->ANGULAR_RESOLUTION.width + cu];
 
 	float lowerWeight	= v - floor(v);
 	float upperWeight	= 1.0 - lowerWeight;
@@ -310,21 +320,23 @@ oclMat LightFieldPicture::getSubapertureImageF(const double u, const double v)
 	float lowerRightWeight	= lowerWeight * rightWeight;
 
 	oclMat leftSum, rightSum, totalSum;
-	ocl::addWeighted(upperLeftImage, upperLeftWeight, lowerLeftImage, lowerLeftWeight, 0, leftSum);
-	ocl::addWeighted(upperRightImage, upperRightWeight, lowerRightImage, lowerRightWeight, 0, rightSum);
+	ocl::addWeighted(upperLeftImage, upperLeftWeight,
+		lowerLeftImage, lowerLeftWeight, 0, leftSum);
+	ocl::addWeighted(upperRightImage, upperRightWeight,
+		lowerRightImage, lowerRightWeight, 0, rightSum);
 	ocl::add(leftSum, rightSum, totalSum);
 
 	return totalSum;
 }
 
 
-Mat LightFieldPicture::getRawImage()
+Mat LightFieldPicture::getRawImage() const
 {
 	return this->rawImage;
 }
 
 
-double LightFieldPicture::getRawFocalLength()
+double LightFieldPicture::getRawFocalLength() const
 {
 	return this->loader.focalLength;
 }

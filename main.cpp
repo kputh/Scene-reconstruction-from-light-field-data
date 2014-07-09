@@ -21,11 +21,11 @@ using namespace std;
 
 int main( int argc, char** argv )
 {
-    if(argc != 2)
-    {
+	if(argc != 2)
+	{
 		cout << "Usage: display_image ImageToLoadAndDisplay" << endl;
 		return -1;
-    }
+	}
 
 	Mat rawImage, subapertureImage, image1, image2, image4, image14;
 	oclMat ocl1;
@@ -37,13 +37,14 @@ int main( int argc, char** argv )
 		double d0 = (t1 - t0) / getTickFrequency();
 		cout << "Loading of file at " << argv[1] << " successful." << endl;
 		cout << "Loading of light field took " << d0 << " seconds." << endl;
-	
+
+		/*
 		ImageRenderer1 renderer = ImageRenderer1();
 		renderer.setLightfield(lf);
 		renderer.setAlpha(1.5);
 
 		t0 = (double)getTickCount();
-		ocl1 = renderer.renderImageOCL();
+		ocl1 = renderer.renderImage();
 		t1 = (double)getTickCount();
 
 		d0 = (t1 - t0) / getTickFrequency();
@@ -53,12 +54,12 @@ int main( int argc, char** argv )
 		string window1 = "refocused image";
 		namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
 		imshow(window1, image1);
-		waitKey(0);
-		
-/*
+		//waitKey(0);
+		*/
+
 		DepthEstimator* estimator = new CDCDepthEstimator;
 		image1 = estimator->estimateDepth(lf);
-*/
+
 		/*
 		ImageRenderer3 renderer = ImageRenderer3();
 		renderer.setLightfield(lf);
@@ -125,19 +126,19 @@ int main( int argc, char** argv )
 	//saveImageToPNGFile(string(argv[1]) + string(".png"), image1);
 	//cin.ignore();
 	// show image
-    //namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display. (original size)
-    
+	//namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display. (original size)
+	
 	/*
 	string window1 = "difference image";
 	namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
-    imshow(window1, image1);                   // Show our image inside it.
+	imshow(window1, image1);                   // Show our image inside it.
 	*/
 	/*
 	namedWindow( "1.0x", WINDOW_NORMAL );// Create a window for display. (original size)
-    imshow( "1.0x", image1 );                   // Show our image inside it.
+	imshow( "1.0x", image1 );                   // Show our image inside it.
 	*/
 
 	//waitKey(0);                                          // Wait for a keystroke in the window
 
-    return 0;
+	return 0;
 }

@@ -29,9 +29,11 @@ class LightFieldPicture /*:
 	Mat rawImage;
 	vector<oclMat> subapertureImages;
 
-	static Mat demosaicImage(const Mat bayerImage);
-	static Mat rectifyLensGrid(const Mat hexagonalLensGrid, LfpLoader metadata);
-	Mat generateSubapertureImage(const unsigned short u, const unsigned short v);
+	static Mat demosaicImage(const Mat& bayerImage);
+	static Mat rectifyLensGrid(const Mat& hexagonalLensGrid,
+		const LfpLoader& metadata);
+	Mat generateSubapertureImage(const unsigned short u,
+		const unsigned short v) const;
 public:
 	Size SPARTIAL_RESOLUTION;
 	Size ANGULAR_RESOLUTION;
@@ -41,14 +43,14 @@ public:
 	~LightFieldPicture(void);
 
 	luminanceType getLuminance(unsigned short x, unsigned short y,
-		unsigned short u, unsigned short v);
+		unsigned short u, unsigned short v) const;
 	luminanceType getSubpixelLuminance(unsigned short x, unsigned short y,
-		unsigned short u, unsigned short v);
-	luminanceType getLuminanceF(float x, float y, float u, float v);
-	oclMat getSubapertureImageI(const unsigned short u, const unsigned short v);
-	oclMat getSubapertureImageF(const double u, const double v);
-	Mat getRawImage();
+		unsigned short u, unsigned short v) const;
+	luminanceType getLuminanceF(float x, float y, float u, float v) const;
+	oclMat getSubapertureImageI(const unsigned short u, const unsigned short v) const;
+	oclMat getSubapertureImageF(const double u, const double v) const;
+	Mat getRawImage() const;
 
-	double getRawFocalLength();
+	double getRawFocalLength() const;
 };
 

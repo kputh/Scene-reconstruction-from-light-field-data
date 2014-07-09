@@ -12,7 +12,7 @@ ImageRenderer2::~ImageRenderer2(void)
 }
 
 
-Mat ImageRenderer2::renderImage()
+oclMat ImageRenderer2::renderImage() const
 {
 	float beta = alpha;
 
@@ -36,5 +36,5 @@ Mat ImageRenderer2::renderImage()
 		}
 	}
 
-	return image;
+	return oclMat(image);
 }
