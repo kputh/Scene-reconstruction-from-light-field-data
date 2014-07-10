@@ -115,9 +115,9 @@ void appendRayCountingChannel(oclMat& image)
 {
 	vector<oclMat> channels;
 	ocl::split(image, channels);
-
-	int rayCountChannelIndex = channels.size() - 1;
-	channels[rayCountChannelIndex].setTo(Scalar(1));
+	
+	oclMat rayCountChannel = oclMat(image.size(), channels[0].depth(), Scalar(1));
+	channels.push_back(rayCountChannel);
 	
 	ocl::merge(channels, image);
 }
@@ -126,7 +126,7 @@ void appendRayCountingChannel(oclMat& image)
 void normalizeByRayCount(oclMat& image)
 {
 	vector<oclMat> channels;
-	split(image, channels);
+	ocl::split(image, channels);
 
 	int rayCountChannelIndex = channels.size() - 1;
 	for (int i = 0; i < rayCountChannelIndex; i++)

@@ -20,21 +20,28 @@ using namespace ocl;
 class LightFieldPicture /*:
 	public LightField*/
 {
-	typedef Vec3f luminanceType;
+	static const Point IMAGE_ORIGIN;
+
+	LfpLoader loader;
+	Mat rawImage, processesImage;
+	vector<oclMat> subapertureImages;
+
+	static Mat demosaicImage(const Mat& bayerImage);
+	static void rectifyLensGrid(Mat& hexagonalLensGrid,
+		const LfpLoader& metadata);
+	oclMat generateSubapertureImage(const unsigned short u,
+		const unsigned short v) const;
+
+	Rect validSpartialCoordinates;
+	double microLensRadiusInPixels;
+	Vec2f fromLensCenterToOrigin;
+
+public:
+	typedef float luminanceType;
 	static const int IMAGE_TYPE;
 
 	static const luminanceType ZERO_LUMINANCE;
 
-	LfpLoader loader;
-	Mat rawImage;
-	vector<oclMat> subapertureImages;
-
-	static Mat demosaicImage(const Mat& bayerImage);
-	static Mat rectifyLensGrid(const Mat& hexagonalLensGrid,
-		const LfpLoader& metadata);
-	Mat generateSubapertureImage(const unsigned short u,
-		const unsigned short v) const;
-public:
 	Size SPARTIAL_RESOLUTION;
 	Size ANGULAR_RESOLUTION;
 

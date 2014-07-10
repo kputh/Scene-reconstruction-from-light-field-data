@@ -21,16 +21,16 @@ DepthEstimator1::~DepthEstimator1(void)
 
 // from GitHub: Itseez/opencv/opencv/samples/cpp/simpleflow_demo.cpp
 static void drawOptFlowMap(const Mat& flow, Mat& cflowmap, int step,
-                    double, const Scalar& color)
+					double, const Scalar& color)
 {
-    for(int y = 0; y < cflowmap.rows; y += step)
-        for(int x = 0; x < cflowmap.cols; x += step)
-        {
-            const Point2f& fxy = flow.at<Point2f>(y, x);
-            line(cflowmap, Point(x,y), Point(cvRound(x+fxy.x), cvRound(y+fxy.y)),
-                 color);
-            circle(cflowmap, Point(x,y), 2, color, -1);
-        }
+	for(int y = 0; y < cflowmap.rows; y += step)
+		for(int x = 0; x < cflowmap.cols; x += step)
+		{
+			const Point2f& fxy = flow.at<Point2f>(y, x);
+			line(cflowmap, Point(x,y), Point(cvRound(x+fxy.x), cvRound(y+fxy.y)),
+				 color);
+			circle(cflowmap, Point(x,y), 2, color, -1);
+		}
 }
 
 

@@ -25,11 +25,11 @@ public:
 	~ImageRenderer(void);
 
 	LightFieldPicture getLightfield() const;
-	void setLightfield(LightFieldPicture lightfield);
+	virtual void setLightfield(LightFieldPicture lightfield);
 	float getAlpha() const;
-	void setAlpha(float alpha);
+	virtual void setAlpha(float alpha);
 	Vec2i getPinholePosition() const;
-	void setPinholePosition(Vec2i pinholePosition);
+	virtual void setPinholePosition(Vec2i pinholePosition);
 
 	virtual oclMat renderImage() const =0;
 };

@@ -10,9 +10,10 @@
 #include "LightFieldPicture.h"
 
 
-const int LightFieldPicture::IMAGE_TYPE = CV_32FC3;
-const LightFieldPicture::luminanceType LightFieldPicture::ZERO_LUMINANCE
-	= Vec3f(0, 0, 0);
+const int LightFieldPicture::IMAGE_TYPE = CV_32FC1;
+const LightFieldPicture::luminanceType LightFieldPicture::ZERO_LUMINANCE = 0;
+
+const Point LightFieldPicture::IMAGE_ORIGIN = Point(0, 0);
 
 
 Mat LightFieldPicture::demosaicImage(const Mat& bayerImage)
@@ -23,12 +24,9 @@ Mat LightFieldPicture::demosaicImage(const Mat& bayerImage)
 }
 
 
-Mat LightFieldPicture::rectifyLensGrid(const Mat& hexagonalLensGrid,
+void LightFieldPicture::rectifyLensGrid(Mat& hexagonalLensGrid,
 	const LfpLoader& metadata)
 {
-	Mat inputImage;
-	hexagonalLensGrid.convertTo(inputImage, IMAGE_TYPE);
-
 	// 1) read LFP metadata
 	const double pixelPitch		= metadata.pixelPitch;
 	const double lensPitch		= metadata.lensPitch;
@@ -59,13 +57,13 @@ Mat LightFieldPicture::rectifyLensGrid(const Mat& hexagonalLensGrid,
 	circle(lensMask, lensCenter, lensRadius, circleColor, CV_FILLED);
 
 	// 4) copy each lens' image from the hexagonal grid to the rectilinear grid
-	Mat rectifiedLensGrid			= Mat::zeros(rectifiedSize, IMAGE_TYPE);
+	Mat rectifiedLensGrid = Mat(rectifiedSize, IMAGE_TYPE, Scalar(0));
 	Rect srcRect, dstRect;
 	Mat srcROI, dstROI;
 	int  centeredRowIndex, centeredLensIndex;
-	const double angleToNextRow			= rotationAngle + M_PI / 3.0;	// 60° to MLA axis
-	const Point2d oneLensToTheRight		= Point2d(cos(rotationAngle), sin(rotationAngle)) * lensPitchInPixels;
-	const Point2d toNextRow				= Point2d(cos(angleToNextRow), sin(angleToNextRow)) * lensPitchInPixels;;
+	const double angleToNextRow = rotationAngle + M_PI / 3.0;	// 60° to MLA axis
+	const Point2d oneLensToTheRight = Point2d(cos(rotationAngle), sin(rotationAngle)) * lensPitchInPixels;
+	const Point2d toNextRow = Point2d(cos(angleToNextRow), sin(angleToNextRow)) * lensPitchInPixels;;
 	const Point2d fromCenterToCorner	= Point2d(1, 1) * -(lensPitchInPixels / 2.0);
 	Point2d lensImageCorner;
 	Point srcCorner, dstCorner;
@@ -91,8 +89,8 @@ Mat LightFieldPicture::rectifyLensGrid(const Mat& hexagonalLensGrid,
 			srcROI	= Mat(hexagonalLensGrid, srcRect);
 			dstROI	= Mat(rectifiedLensGrid, dstRect);
 
-			getRectSubPix(inputImage, lensImageSize, lensCenter, dstROI);
-			//srcROI.copyTo(dstROI, lensMask);
+			getRectSubPix(hexagonalLensGrid, lensImageSize, lensCenter, dstROI);
+			//srcROI.copyTo(dstROI, lensMaskOcl);
 			//srcROI.copyTo(dstROI);
 
 			//rectangle(hexagonalLensGrid, srcRect, Scalar(255,0,0), 1);
@@ -101,7 +99,7 @@ Mat LightFieldPicture::rectifyLensGrid(const Mat& hexagonalLensGrid,
 		}
 	}
 
-	return rectifiedLensGrid;
+	hexagonalLensGrid = rectifiedLensGrid;
 }
 
 
@@ -129,22 +127,29 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 
 	this->SPARTIAL_RESOLUTION	= Size(columnCount, rowCount);
 
-	// process raw image
-	Mat demosaicedImage	= this->demosaicImage(loader.bayerImage);
-	demosaicedImage.convertTo(demosaicedImage, IMAGE_TYPE, 1.0 / 65535.0);
-	Mat rectifiedImage	= this->rectifyLensGrid(demosaicedImage, loader); // TODO abschaffen?
+	this->validSpartialCoordinates = Rect(IMAGE_ORIGIN, SPARTIAL_RESOLUTION);
+	this->microLensRadiusInPixels = loader.lensPitch / (2.0 * loader.pixelPitch);
+	this->fromLensCenterToOrigin = Vec2f(ANGULAR_RESOLUTION.width,
+		ANGULAR_RESOLUTION.height) * -0.5;
 
-	this->rawImage	= rectifiedImage;
+	// process raw image
+	Mat demosaicedImage	= demosaicImage(loader.bayerImage);
+	demosaicedImage.copyTo(this->rawImage);
+
+	cvtColor(demosaicedImage, demosaicedImage, CV_RGB2GRAY);
+	demosaicedImage.convertTo(demosaicedImage, CV_32FC1, 1.0 / 65535.0);
+	rectifyLensGrid(demosaicedImage, loader); // TODO abschaffen?
+	this->processesImage = demosaicedImage;
 
 	// generate all sub-aperture images
-	size_t saImageCount = this->ANGULAR_RESOLUTION.width * this->ANGULAR_RESOLUTION.height;
-	this->subapertureImages = vector<oclMat>(saImageCount);
+	size_t saImageCount = ANGULAR_RESOLUTION.area();
+	subapertureImages = vector<oclMat>(saImageCount);
 	int u, v, index = 0;
-	for (v = 0; v < this->ANGULAR_RESOLUTION.height; v++)
+	for (v = 0; v < ANGULAR_RESOLUTION.height; v++)
 	{
-		for (u = 0; u < this->ANGULAR_RESOLUTION.width; u++)
+		for (u = 0; u < ANGULAR_RESOLUTION.width; u++)
 		{
-			this->subapertureImages[index] = oclMat(this->generateSubapertureImage(u, v));
+			subapertureImages[index] = generateSubapertureImage(u, v);
 			index++;
 		}
 	}
@@ -160,57 +165,45 @@ LightFieldPicture::~LightFieldPicture(void)
 LightFieldPicture::luminanceType LightFieldPicture::getLuminance(
 	unsigned short x, unsigned short y, unsigned short u, unsigned short v) const
 {
-	// handle coordinates outside the recorded lightfield
-	const Point origin = Point(0, 0);
-	const Rect validSpartialCoordinates = Rect(origin, this->SPARTIAL_RESOLUTION);
 	// luminance outside the recorded spartial range is zero
 	if (!validSpartialCoordinates.contains(Point(x, y)))
 		return ZERO_LUMINANCE;
 
 	// luminance outside the recorded angular range is clamped to the closest valid ray
-	const Vec2f translationToOrigin = Vec2f(this->ANGULAR_RESOLUTION.width,
-		this->ANGULAR_RESOLUTION.height) * -0.5;
 	Vec2f angularVector = Vec2f(u, v);
-	angularVector += translationToOrigin;	// center value range at (0, 0)
+	angularVector += fromLensCenterToOrigin;	// center value range at (0, 0)
 	double nrm = norm(angularVector);
-	const double microLensRadiusInPixels = this->loader.lensPitch / (2.0 * this->loader.pixelPitch);
 	if (nrm > microLensRadiusInPixels)
 	{
 		angularVector *= microLensRadiusInPixels / nrm;
 		angularVector[0] = roundToZero(angularVector[0]);
 		angularVector[1] = roundToZero(angularVector[1]);
-		angularVector -= translationToOrigin;
+		angularVector -= fromLensCenterToOrigin;
 		u = angularVector[0];
 		v = angularVector[1];
 	}
 
 	Point pixelPosition = Point(x * this->ANGULAR_RESOLUTION.width + u,
 		y * this->ANGULAR_RESOLUTION.height + v);
-	return rawImage.at<luminanceType>(pixelPosition);
+	return processesImage.at<luminanceType>(pixelPosition);
 }
 
 
 LightFieldPicture::luminanceType LightFieldPicture::getSubpixelLuminance(
 	unsigned short x, unsigned short y, unsigned short u, unsigned short v) const
 {
-	// handle coordinates outside the recorded lightfield
-	const Point origin = Point(0, 0);
-	const Rect validSpartialCoordinates = Rect(origin, this->SPARTIAL_RESOLUTION);
 	// luminance outside the recorded spartial range is zero
 	if (!validSpartialCoordinates.contains(Point(x, y)))
 		return ZERO_LUMINANCE;
 
 	// luminance outside the recorded angular range is clamped to the closest valid ray
-	const Vec2f translationToOrigin = Vec2f(this->ANGULAR_RESOLUTION.width,
-		this->ANGULAR_RESOLUTION.height) * -0.5;
 	Vec2f angularVector = Vec2f(u, v);
-	angularVector += translationToOrigin;	// center value range at (0, 0)
+	angularVector += fromLensCenterToOrigin;	// center value range at (0, 0)
 	double nrm = norm(angularVector);
-	const double microLensRadiusInPixels = this->loader.lensPitch / (2.0 * this->loader.pixelPitch);
 	if (nrm > microLensRadiusInPixels)
 	{
 		angularVector *= microLensRadiusInPixels / nrm;
-		angularVector -= translationToOrigin;
+		angularVector -= fromLensCenterToOrigin;
 		u = angularVector[0];
 		v = angularVector[1];
 	}
@@ -219,8 +212,8 @@ LightFieldPicture::luminanceType LightFieldPicture::getSubpixelLuminance(
 	const Size singlePixelSize = Size(1, 1);
 	Point2f center = Point2f(x * this->ANGULAR_RESOLUTION.width + u,
 		y * this->ANGULAR_RESOLUTION.height + v);
-	getRectSubPix(rawImage, singlePixelSize, center, singlePixel);
-	return singlePixel.at<luminanceType>(origin);
+	getRectSubPix(processesImage, singlePixelSize, center, singlePixel);
+	return singlePixel.at<luminanceType>(IMAGE_ORIGIN);
 }
 
 
@@ -228,8 +221,8 @@ LightFieldPicture::luminanceType LightFieldPicture::getLuminanceF(
 	float x, float y, float u, float v) const
 {
 	// handle coordinates outside the recorded lightfield
-	const float halfWidth = this->SPARTIAL_RESOLUTION.width / 2.0;
-	const float halfHeight = this->SPARTIAL_RESOLUTION.height / 2.0;
+	const float halfWidth = SPARTIAL_RESOLUTION.width / 2.0;
+	const float halfHeight = SPARTIAL_RESOLUTION.height / 2.0;
 	// luminance outside the recorded spartial range is zero
 	if (abs(x) > halfWidth || abs(y) > halfHeight)
 		return ZERO_LUMINANCE;
@@ -237,7 +230,6 @@ LightFieldPicture::luminanceType LightFieldPicture::getLuminanceF(
 	// luminance outside the recorded angular range is clamped to the closest valid ray
 	Vec2f angularVector = Vec2f(u, v);
 	double nrm = norm(angularVector);
-	const double microLensRadiusInPixels = this->loader.lensPitch / (2.0 * this->loader.pixelPitch);
 	if (nrm > microLensRadiusInPixels)
 	{
 		//angularVector *= microLensRadiusInPixels / nrm;
@@ -260,16 +252,16 @@ LightFieldPicture::luminanceType LightFieldPicture::getLuminanceF(
 	Vec2f lensCenter = centralLensCenter + Vec2f(x, y).mul(lensSize);
 	lensCenter = Vec2f(round(lensCenter[0]), round(lensCenter[1]));
 	Vec2f position = lensCenter + angularVector;
-	getRectSubPix(rawImage, singlePixelSize, Point2f(position), singlePixel);
+	getRectSubPix(processesImage, singlePixelSize, Point2f(position), singlePixel);
 
 	return singlePixel.at<luminanceType>(Point(0, 0));
 }
 
 
-Mat LightFieldPicture::generateSubapertureImage(const unsigned short u,
+oclMat LightFieldPicture::generateSubapertureImage(const unsigned short u,
 	const unsigned short v) const
 {
-	Mat_<luminanceType> subapertureImage(this->SPARTIAL_RESOLUTION, CV_32FC3);
+	Mat_<luminanceType> subapertureImage(this->SPARTIAL_RESOLUTION, IMAGE_TYPE);
 
 	int x, y;
 	for (y = 0; y < this->SPARTIAL_RESOLUTION.height; y++)
@@ -279,7 +271,7 @@ Mat LightFieldPicture::generateSubapertureImage(const unsigned short u,
 				this->getLuminance(x, y, u, v);
 		}
 
-	return subapertureImage;
+	return oclMat(subapertureImage);
 }
 
 

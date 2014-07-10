@@ -11,7 +11,7 @@
 
 const float CDCDepthEstimator::ALPHA_MIN					= 0.2;
 const float CDCDepthEstimator::ALPHA_MAX					= 2.0;
-const int CDCDepthEstimator::DEPTH_RESOLUTION				= 100;
+const int CDCDepthEstimator::DEPTH_RESOLUTION				= 20;
 const Size CDCDepthEstimator::DEFOCUS_WINDOW_SIZE			= Size(9, 9);
 const Size CDCDepthEstimator::CORRESPONDENCE_WINDOW_SIZE	= Size(9, 9);
 const float CDCDepthEstimator::LAMBDA_SOURCE[]				= { 1, 1 };
@@ -55,13 +55,14 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	{
 		this->renderer->setAlpha(alpha);
 		refocusedImage = this->renderer->renderImage();
-		ocl::cvtColor(refocusedImage, refocusedImage, CV_RGB2GRAY);	// TODO anders lösen
 
 		response = oclMat(lightfield.SPARTIAL_RESOLUTION, CV_32FC3,
 			Scalar(0, 0, alpha));
 
 		calculateDefocusResponse(lightfield, response, alpha, refocusedImage);
 		calculateCorrespondenceResponse(lightfield, response, alpha, refocusedImage);
+
+		// TODO Extrema gleich bestimmen, Ergebnis nicht speichern
 
 		responses.push_back(response);
 	}
@@ -104,29 +105,38 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	//normalize(depth, depth, 0, 1, NORM_MINMAX);
 	//normalize(image, image, 0, 1, NORM_MINMAX);
 
+	Mat m; maxDefocusResponse.download(m);
 	string window1 = "depth from defocus";
 	namedWindow(window1, WINDOW_NORMAL);
-	imshow(window1, maxDefocusResponse);
+	imshow(window1, m);
 
+	minCorrespondenceResponse.download(m);
 	string window2 = "depth from correspondence";
 	namedWindow(window2, WINDOW_NORMAL);
-	imshow(window2, minCorrespondenceResponse);
+	imshow(window2, m);
 
+	defocusConfidence.download(m);
 	string window3 = "confidence from defocus";
 	namedWindow(window3, WINDOW_NORMAL);
-	imshow(window3, defocusConfidence);
+	imshow(window3, m);
 
+	correspondenceConfidence.download(m);
+	normalize(m, m, 0, 1, NORM_MINMAX);
 	string window4 = "confidence from correspondence";
 	namedWindow(window4, WINDOW_NORMAL);
-	imshow(window4, correspondenceConfidence);
+	imshow(window4, m);
 
+	image.download(m);
+	normalize(m, m, 0, 1, NORM_MINMAX);
 	string window5 = "central perspective";
 	namedWindow(window5, WINDOW_NORMAL);
-	imshow(window5, image);
+	imshow(window5, m);
 
+	depth.download(m);
+	normalize(m, m, 0, 1, NORM_MINMAX);
 	string window6 = "combined depth map";
 	namedWindow(window6, WINDOW_NORMAL);
-	imshow(window6, depth);
+	imshow(window6, m);
 
 	waitKey(0);
 
@@ -166,7 +176,6 @@ void CDCDepthEstimator::calculateCorrespondenceResponse(
 		for (u = 0; u < lightfield.ANGULAR_RESOLUTION.width; u++)
 		{
 			subapertureImage = lightfield.getSubapertureImageI(u, v); // TODO reelle Koordinaten verwenden
-			ocl::cvtColor(subapertureImage, subapertureImage, CV_RGB2GRAY);	// TODO anders lösen
 			ocl::subtract(subapertureImage, refocusedImage, differenceImage);	// FEHLER sub-aperture image muss verschoben sein
 			ocl::multiply(differenceImage, differenceImage, squaredDifference);
 			ocl::add(variance, squaredDifference, variance);
@@ -185,44 +194,44 @@ void CDCDepthEstimator::calculateCorrespondenceResponse(
 
 oclMat CDCDepthEstimator::argMaxAlpha(const vector<oclMat>& responses) const
 {
-	typedef Vec3f elementType;	// (defocus response, correspondence response, alpha)
-	const int responseIndex = 0;	// index of defocus response
+	const int responseChannelIndex = 0;	// index of defocus response
+	const int alphaChannelIndex = 2;
 
-	int height			= responses[0].size().height;
-	int width			= responses[0].size().width;
-	int responseCount	= responses.size();
+	const int responseCount	= responses.size();
 
-	oclMat matrix, max1, max2;
-	const oclMat multiplier = oclMat(responses[0].size(), responses[0].type(),
-		Scalar(1000, 1, 1, 1));
-	responses[0].copyTo(max1);
-	responses[0].copyTo(max2);
-	ocl::multiply(multiplier, max1, max1);
-	ocl::multiply(multiplier, max2, max2);
+	vector<oclMat> channels;
+	ocl::split(responses[0], channels);
+
+	oclMat maxResponse1, maxResponse2, maxAlpha1, maxAlpha2, mask1, mask2, mask3;
+	channels[responseChannelIndex].copyTo(maxResponse1);
+	channels[responseChannelIndex].copyTo(maxResponse2);
+	channels[alphaChannelIndex].copyTo(maxAlpha1);
+	channels[alphaChannelIndex].copyTo(maxAlpha2);
 
 	for (int responseIndex = 1; responseIndex < responseCount; responseIndex++)
 	{
-		ocl::multiply(responses[responseIndex], multiplier, matrix);
+		ocl::split(responses[responseIndex], channels);
 
 		// find first maximum
-		ocl::max(matrix, max1, max1);
+		ocl::compare(channels[responseChannelIndex], maxResponse1, mask1, CMP_GT);
 
 		// find second maximum
-		ocl::min(matrix, max1, matrix);
-		ocl::max(matrix, max2, max2);
+		ocl::compare(channels[responseChannelIndex], maxResponse1, mask2, CMP_LT);
+		ocl::compare(channels[responseChannelIndex], maxResponse2, mask3, CMP_GT);
+		ocl::bitwise_and(mask2, mask3, mask2);
+
+		channels[responseChannelIndex].copyTo(maxResponse1, mask1);
+		channels[responseChannelIndex].copyTo(maxResponse2, mask2);
+		channels[alphaChannelIndex].copyTo(maxAlpha1, mask1);
+		channels[alphaChannelIndex].copyTo(maxAlpha2, mask2);
 	}
 
-	// reduce to alpha values
-	vector<oclMat> channels1, channels2, resultChannels(2);
-
-	ocl::split(max1, channels1);
-	ocl::split(max2, channels2);
-
-	resultChannels[0] = channels1[2];
-	resultChannels[1] = channels2[2];
+	channels = vector<oclMat>(2);
+	channels[0] = maxAlpha1;
+	channels[1] = maxAlpha2;
 
 	oclMat alphas;
-	ocl::merge(resultChannels, alphas);
+	ocl::merge(channels, alphas);
 
 	return alphas;
 }
@@ -230,44 +239,44 @@ oclMat CDCDepthEstimator::argMaxAlpha(const vector<oclMat>& responses) const
 
 oclMat CDCDepthEstimator::argMinAlpha(const vector<oclMat>& responses) const
 {
-	typedef Vec3f elementType;	// (defocus response, correspondence response, alpha)
-	const int responseIndex = 1;	// index of correspondence response
+	const int responseChannelIndex = 1;	// index of correspondence response
+	const int alphaChannelIndex = 2;
 
-	int height			= responses[0].size().height;
-	int width			= responses[0].size().width;
 	int responseCount	= responses.size();
 
-	oclMat matrix, min1, min2;
-	const oclMat multiplier = oclMat(responses[0].size(), responses[0].type(),
-		Scalar(1, 1000, 1, 1));
-	responses[0].copyTo(min1);
-	responses[0].copyTo(min2);
-	ocl::multiply(multiplier, min1, min1);
-	ocl::multiply(multiplier, min2, min2);
+	vector<oclMat> channels;
+	ocl::split(responses[0], channels);
+
+	oclMat minResponse1, minResponse2, minAlpha1, minAlpha2, mask1, mask2, mask3;
+	channels[responseChannelIndex].copyTo(minResponse1);
+	channels[responseChannelIndex].copyTo(minResponse2);
+	channels[alphaChannelIndex].copyTo(minAlpha1);
+	channels[alphaChannelIndex].copyTo(minAlpha2);
 
 	for (int responseIndex = 1; responseIndex < responseCount; responseIndex++)
 	{
-		ocl::multiply(responses[responseIndex], multiplier, matrix);
+		ocl::split(responses[responseIndex], channels);
 
-		// find first maximum
-		ocl::min(matrix, min1, min1);
+		// find first minimum
+		ocl::compare(channels[responseChannelIndex], minResponse1, mask1, CMP_LT);
 
-		// find second maximum
-		ocl::max(matrix, min1, matrix);
-		ocl::min(matrix, min2, min2);
+		// find second minimum
+		ocl::compare(channels[responseChannelIndex], minResponse1, mask2, CMP_GT);
+		ocl::compare(channels[responseChannelIndex], minResponse2, mask3, CMP_LT);
+		ocl::bitwise_and(mask2, mask3, mask2);
+
+		channels[responseChannelIndex].copyTo(minResponse1, mask1);
+		channels[responseChannelIndex].copyTo(minResponse2, mask2);
+		channels[alphaChannelIndex].copyTo(minAlpha1, mask1);
+		channels[alphaChannelIndex].copyTo(minAlpha2, mask2);
 	}
 
-	// reduce to alpha values
-	vector<oclMat> channels1, channels2, resultChannels(2);
-
-	ocl::split(min1, channels1);
-	ocl::split(min2, channels2);
-
-	resultChannels[0] = channels1[2];
-	resultChannels[1] = channels2[2];
+	channels = vector<oclMat>(2);
+	channels[0] = minAlpha1;
+	channels[1] = minAlpha2;
 
 	oclMat alphas;
-	ocl::merge(resultChannels, alphas);
+	ocl::merge(channels, alphas);
 
 	return alphas;
 }
