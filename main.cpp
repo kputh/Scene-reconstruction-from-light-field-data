@@ -38,6 +38,14 @@ int main( int argc, char** argv )
 		cout << "Loading of file at " << argv[1] << " successful." << endl;
 		cout << "Loading of light field took " << d0 << " seconds." << endl;
 
+		Mat atlas; lf.getSubapertureImageAtlas().download(atlas);
+		saveImageToPNGFile("atlas.png", atlas);
+
+		string window1 = "subaperture image atlas";
+		namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
+		imshow(window1, atlas);
+		waitKey(0);
+
 		/*
 		ImageRenderer1 renderer = ImageRenderer1();
 		renderer.setAlpha(1.0);
@@ -57,9 +65,10 @@ int main( int argc, char** argv )
 		waitKey(0);
 		*/
 		
+		/*
 		DepthEstimator* estimator = new CDCDepthEstimator;
 		image1 = estimator->estimateDepth(lf);
-		
+		*/
 		/*
 		ImageRenderer3 renderer = ImageRenderer3();
 		renderer.setLightfield(lf);

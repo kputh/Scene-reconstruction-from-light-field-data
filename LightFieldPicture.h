@@ -25,12 +25,15 @@ class LightFieldPicture /*:
 	LfpLoader loader;
 	Mat rawImage, processesImage;
 	vector<oclMat> subapertureImages;
+	oclMat subapertureImageAtlas;
 
 	static Mat demosaicImage(const Mat& bayerImage);
 	static void rectifyLensGrid(Mat& hexagonalLensGrid,
 		const LfpLoader& metadata);
 	oclMat generateSubapertureImage(const unsigned short u,
 		const unsigned short v) const;
+	static oclMat extractSubapertureImageAtlas(const Mat& hexagonalLensGrid,
+		const LfpLoader& metadata);
 
 	Rect validSpartialCoordinates;
 	double microLensRadiusInPixels;
@@ -57,6 +60,7 @@ public:
 	oclMat getSubapertureImageI(const unsigned short u, const unsigned short v) const;
 	oclMat getSubapertureImageF(const double u, const double v) const;
 	Mat getRawImage() const;
+	oclMat getSubapertureImageAtlas() const;
 
 	double getRawFocalLength() const;
 };

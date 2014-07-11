@@ -103,6 +103,74 @@ void LightFieldPicture::rectifyLensGrid(Mat& hexagonalLensGrid,
 }
 
 
+oclMat LightFieldPicture::extractSubapertureImageAtlas(
+	const Mat& hexagonalLensGrid, const LfpLoader& metadata)
+{
+	// 1) read LFP metadata
+	const double pixelPitch		= metadata.pixelPitch;
+	const double lensPitch		= metadata.lensPitch;
+	const double rotationAngle	= 0;//-metadata.rotationAngle;
+	const double scaleFactorX	= metadata.scaleFactor[0];
+	const double scaleFactorY	= metadata.scaleFactor[1];
+	const double sensorOffsetX	= metadata.sensorOffset[0];
+	const double sensorOffsetY	= metadata.sensorOffset[1];
+
+	const Size srcSize			= hexagonalLensGrid.size();
+	const Vec2f sensorCenter	= Vec2f(srcSize.width, srcSize.height) * 0.5;
+	const Vec2f mlaOffset		= Vec2f(sensorOffsetX, sensorOffsetY) / pixelPitch;
+	const Vec2f mlaCenter		= sensorCenter + mlaOffset;
+
+	// 2) determine size of the hexagonal grid and the rectilinear grid
+	const double lensPitchInPixels		= lensPitch / pixelPitch;
+
+	const Size correctedSrcSize = RotatedRect(mlaCenter, srcSize, rotationAngle)
+		.boundingRect().size();
+	const double lensWidth = lensPitchInPixels * scaleFactorX;
+	const double rowHeight = lensPitchInPixels * scaleFactorY * cos(M_PI / 6.0);
+	const int colCount = floor(correctedSrcSize.width / lensWidth) - 1;
+	const int rowCount = floor(correctedSrcSize.height / rowHeight) - 1;
+
+	const int lensImageLength = ceil(lensPitchInPixels);
+	const int dstWidth = colCount * lensImageLength;
+	const int dstHeight = rowCount * lensImageLength;
+
+	const double angleToNextRow = M_PI / 3.0 + rotationAngle;	// 60° to MLA axis
+	const Vec2f nextLens = Vec2f(cos(rotationAngle), sin(rotationAngle))
+		* lensPitchInPixels;
+	const Vec2f nextRow = Vec2f(cos(angleToNextRow), sin(angleToNextRow))
+		* lensPitchInPixels;
+
+	const int u0 = lensImageLength / 2;
+	const int v0 = lensImageLength / 2;
+	const int s0 = colCount / 2;
+	const int t0 = rowCount / 2 - 1;
+
+	Mat map = Mat(dstHeight, dstWidth, CV_32FC2);
+	int x, y, s, t, u, v;
+	for (y = 0; y < map.rows; y++)
+	{
+		v = y / rowCount - v0;
+		t = y % rowCount - t0;
+
+		for (x = 0; x < map.cols; x++)
+		{
+			u = x / colCount - u0;
+			s = x % colCount - s0;
+
+			map.at<Vec2f>(y, x) = floor(s - t / 2.) * nextLens + t * nextRow
+				+ Vec2f(u, v) + mlaCenter;
+		}
+	}
+
+	//cout << "map = " << map << endl;
+	oclMat subapertureImageAtlas;
+	ocl::remap(oclMat(hexagonalLensGrid), subapertureImageAtlas, oclMat(map), oclMat(),
+		CV_INTER_LINEAR, BORDER_CONSTANT, Scalar(0,0,65535));	// TODO use all parameters
+
+	return subapertureImageAtlas;
+}
+
+
 LightFieldPicture::LightFieldPicture(void)
 {
 }
@@ -136,10 +204,12 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 	Mat demosaicedImage	= demosaicImage(loader.bayerImage);
 	demosaicedImage.copyTo(this->rawImage);
 
+	this->subapertureImageAtlas = extractSubapertureImageAtlas(demosaicedImage, loader);
+	/*
 	cvtColor(demosaicedImage, demosaicedImage, CV_RGB2GRAY);
 	demosaicedImage.convertTo(demosaicedImage, CV_32FC1, 1.0 / 65535.0);
 	rectifyLensGrid(demosaicedImage, loader); // TODO abschaffen?
-	this->processesImage = demosaicedImage;
+	demosaicedImage.copyTo(this->processesImage);
 
 	// generate all sub-aperture images
 	size_t saImageCount = ANGULAR_RESOLUTION.area();
@@ -153,6 +223,7 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 			index++;
 		}
 	}
+	*/
 }
 
 
@@ -325,6 +396,12 @@ oclMat LightFieldPicture::getSubapertureImageF(const double u, const double v) c
 Mat LightFieldPicture::getRawImage() const
 {
 	return this->rawImage;
+}
+
+
+oclMat LightFieldPicture::getSubapertureImageAtlas() const
+{
+	return this->subapertureImageAtlas;
 }
 
 
