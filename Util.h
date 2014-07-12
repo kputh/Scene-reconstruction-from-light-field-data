@@ -7,9 +7,10 @@
 #include "LightFieldPicture.h"
 
 double round(double value);
-Vec2f round(Vec2f vector);
+Vec2d round(Vec2d vector);
 double roundTo(double value, double target);
 double roundToZero(double value);
+Vec2d roundToZero(Vec2d vector);
 void adjustLuminanceSpace(Mat& image);
 void saveImageToPNGFile(string fileName, Mat image);
 void saveImageArc(LightFieldPicture lightfield, string sourceFileName,

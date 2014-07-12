@@ -31,7 +31,7 @@ oclMat ImageRenderer2::renderImage() const
 			pixelPosition = Vec2f(x, y) + spartialCorrection;
 			angularCoordinates = ((pinholePosition - pixelPosition) / beta) + pixelPosition;
 			angularCoordinates -= angularCorrection;
-			image.at<Vec3f>(Point(x, y)) = this->lightfield.getLuminance(x, y,
+			image.at<Vec3f>(Point(x, y)) = this->lightfield.getLuminanceI(x, y,
 				round(angularCoordinates[0]), round(angularCoordinates[1]));
 		}
 	}

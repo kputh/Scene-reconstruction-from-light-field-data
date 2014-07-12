@@ -14,7 +14,7 @@ double round(double value)
 	return (value < 0.0) ? ceil(value - 0.5) : floor(value + 0.5);
 }
 
-Vec2f round(Vec2f vector)
+Vec2d round(Vec2d vector)
 {
 	for(int i = 0; i < vector.rows; i++)
 		vector[i] = round(vector[i]);
@@ -30,6 +30,14 @@ double roundTo(double value, double target)
 double roundToZero(double value)
 {
 	return (value < 0.0) ? ceil(value) : floor(value);
+}
+
+Vec2d roundToZero(Vec2d vector)
+{
+	for(int i = 0; i < vector.rows; i++)
+		vector[i] = roundToZero(vector[i]);
+
+	return vector;
 }
 
 void adjustLuminanceSpace(Mat& image)	// ist das nicht identisch zu CV::normalize()?

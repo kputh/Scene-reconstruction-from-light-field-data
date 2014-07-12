@@ -19,8 +19,12 @@
 using namespace cv;
 using namespace std;
 
+const char KERNEL_PATH[] = "C:\\Users\\Kai\\Downloads\\opencv_ocl_kernels\\";
+
 int main( int argc, char** argv )
 {
+	ocl::setBinaryPath(KERNEL_PATH);
+
 	if(argc != 2)
 	{
 		cout << "Usage: display_image ImageToLoadAndDisplay" << endl;
@@ -38,14 +42,6 @@ int main( int argc, char** argv )
 		cout << "Loading of file at " << argv[1] << " successful." << endl;
 		cout << "Loading of light field took " << d0 << " seconds." << endl;
 
-		Mat atlas; lf.getSubapertureImageAtlas().download(atlas);
-		saveImageToPNGFile("atlas.png", atlas);
-
-		string window1 = "subaperture image atlas";
-		namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
-		imshow(window1, atlas);
-		waitKey(0);
-
 		/*
 		ImageRenderer1 renderer = ImageRenderer1();
 		renderer.setAlpha(1.0);
@@ -58,17 +54,17 @@ int main( int argc, char** argv )
 		d0 = (t1 - t0) / getTickFrequency();
 		cout << "Rendering took " << d0 << " seconds." << endl;
 		
+		ocl1.download(image1);
 		lf.getSubapertureImageI(5,5).download(image1);
 		string window1 = "refocused image";
 		namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
 		imshow(window1, image1);
 		waitKey(0);
 		*/
-		
-		/*
+
 		DepthEstimator* estimator = new CDCDepthEstimator;
 		image1 = estimator->estimateDepth(lf);
-		*/
+
 		/*
 		ImageRenderer3 renderer = ImageRenderer3();
 		renderer.setLightfield(lf);

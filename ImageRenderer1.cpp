@@ -44,6 +44,24 @@ void ImageRenderer1::setAlpha(float alpha)
 
 oclMat ImageRenderer1::renderImage() const
 {
+	if (alpha == 1)
+	{
+		oclMat image = oclMat(lightfield.SPARTIAL_RESOLUTION,
+			lightfield.IMAGE_TYPE, lightfield.ZERO_LUMINANCE);
+
+		oclMat subapertureImage;
+		int u, v;
+		for(u = 0; u < this->lightfield.ANGULAR_RESOLUTION.width; u++)
+			for(v = 0; v < this->lightfield.ANGULAR_RESOLUTION.height; v++)
+			{
+				subapertureImage = lightfield.getSubapertureImageI(u, v);
+				ocl::add(subapertureImage, image, image);
+			}
+
+		image /= lightfield.ANGULAR_RESOLUTION.area();
+		return image;
+	}
+
 	oclMat image = oclMat(imageSize, imageType, Scalar(0, 0));
 	oclMat subapertureImage, dstROI;
 	Vec2f angularIndices, realAngles, realTranslation, integralTranslation,

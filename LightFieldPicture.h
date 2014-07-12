@@ -23,20 +23,17 @@ class LightFieldPicture /*:
 	static const Point IMAGE_ORIGIN;
 
 	LfpLoader loader;
-	Mat rawImage, processesImage;
+	Mat rawImage;
 	vector<oclMat> subapertureImages;
 	oclMat subapertureImageAtlas;
 
-	static Mat demosaicImage(const Mat& bayerImage);
-	static void rectifyLensGrid(Mat& hexagonalLensGrid,
-		const LfpLoader& metadata);
-	oclMat generateSubapertureImage(const unsigned short u,
-		const unsigned short v) const;
-	static oclMat extractSubapertureImageAtlas(const Mat& hexagonalLensGrid,
-		const LfpLoader& metadata);
+	void extractSubapertureImageAtlas();
 
+	Vec2f mlaCenter, nextLens, nextRow;
 	Rect validSpartialCoordinates;
+	double lensPitchInPixels;
 	double microLensRadiusInPixels;
+	double rotationAngle;	// in radians
 	Vec2f fromLensCenterToOrigin;
 
 public:
@@ -52,13 +49,14 @@ public:
 	LightFieldPicture(const string& pathToFile);
 	~LightFieldPicture(void);
 
-	luminanceType getLuminance(unsigned short x, unsigned short y,
-		unsigned short u, unsigned short v) const;
-	luminanceType getSubpixelLuminance(unsigned short x, unsigned short y,
-		unsigned short u, unsigned short v) const;
-	luminanceType getLuminanceF(float x, float y, float u, float v) const;
+	luminanceType getLuminanceI(const int x, const int y,
+		const int u, const int v) const;
+	luminanceType getLuminanceF(const float x, const float y,
+		const float u, const float v) const;
+
 	oclMat getSubapertureImageI(const unsigned short u, const unsigned short v) const;
 	oclMat getSubapertureImageF(const double u, const double v) const;
+
 	Mat getRawImage() const;
 	oclMat getSubapertureImageAtlas() const;
 
