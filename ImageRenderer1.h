@@ -17,18 +17,15 @@
 class ImageRenderer1 :
 	public ImageRenderer
 {
-	static const Vec2f UV_SCALE;
 	static const float ACCUMULATOR_SCALE;
+	static const Point2f UNIT_VECTORS[3];
 
 	double weight;
-	Size saSize;
 	Size imageSize;
 	int imageType;
 	Vec2f angularCorrection;
-	Vec2f dstCenter;
-	Vec2f fromCenterToCorner;
-	Vec2f srcCorner;
-	Point srcCornerPoint;
+	Vec2f fromCornerToCenter;
+	Rect cutRect;
 
 public:
 	ImageRenderer1(void);
@@ -39,4 +36,3 @@ public:
 
 	oclMat renderImage() const;
 };
-

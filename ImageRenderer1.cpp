@@ -4,8 +4,9 @@
 #include "ImageRenderer1.h"
 
 
-const Vec2f ImageRenderer1::UV_SCALE = Vec2f(1.0, 1.0 / cos(M_PI / 6.0));
 const float ImageRenderer1::ACCUMULATOR_SCALE = 1.2;
+const Point2f ImageRenderer1::UNIT_VECTORS[3] = { Point2f(0, 0), Point2f(1, 0),
+	Point2f(0, 1) };
 
 
 ImageRenderer1::ImageRenderer1(void)
@@ -22,16 +23,20 @@ void ImageRenderer1::setLightfield(LightFieldPicture lightfield)
 {
 	this->lightfield = lightfield;
 
-	this->saSize = lightfield.SPARTIAL_RESOLUTION;
+	Size saSize = lightfield.SPARTIAL_RESOLUTION;
 	this->imageSize = Size(saSize.width * ACCUMULATOR_SCALE,
 		saSize.height * ACCUMULATOR_SCALE);
-	this->imageType = CV_32FC2;//CV_MAKETYPE(CV_32F, this->lightfield.getRawImage().channels() + 1);
+	this->imageType = CV_MAKETYPE(CV_32F,
+		this->lightfield.getSubapertureImageAtlas().channels() + 1);
 	this->angularCorrection = Vec2f(lightfield.ANGULAR_RESOLUTION.width, 
 		lightfield.ANGULAR_RESOLUTION.height) * 0.5;
-	this->dstCenter = Vec2f(imageSize.width, imageSize.height) * 0.5;
-	this->fromCenterToCorner = Vec2f(saSize.width, saSize.height) * -0.5;
-	this->srcCorner	= dstCenter + fromCenterToCorner;
-	this->srcCornerPoint = Point(round(srcCorner[0]), round(srcCorner[1]));
+	this->fromCornerToCenter = Vec2f(imageSize.width - saSize.width,
+		imageSize.height - saSize.height) * 0.5;
+
+	const int cutWidth = saSize.width - 4;
+	const int cutHeight = saSize.height - 4;
+	this->cutRect = Rect((imageSize.width - cutWidth) / 2,
+		(imageSize.height - cutHeight) / 2, cutWidth, cutHeight);
 }
 
 
@@ -63,43 +68,42 @@ oclMat ImageRenderer1::renderImage() const
 	}
 
 	oclMat image = oclMat(imageSize, imageType, Scalar(0, 0));
-	oclMat subapertureImage, dstROI;
-	Vec2f angularIndices, realAngles, realTranslation, integralTranslation,
-		srcAngles, dstTranslation, dstCorner;
-	Rect dstRect;
+	oclMat subapertureImage, modifiedSubapertureImage;
+	Vec2f translation;
+	Point2f dstTri[3];
+	Mat transformation;
 
 	int u, v;
 	for(u = 0; u < this->lightfield.ANGULAR_RESOLUTION.width; u++)
 	{
 		for(v = 0; v < this->lightfield.ANGULAR_RESOLUTION.height; v++)
 		{
-			angularIndices = Vec2f(u, v);
-			realAngles = angularIndices - angularCorrection;
-			realTranslation = realAngles * weight;
-			integralTranslation = round(realTranslation);
-				// Vec2f(floor(realTranslation[0]), floor(realTranslation[1]));
-			srcAngles = angularIndices -
-				(realTranslation - integralTranslation) / weight;
-			dstTranslation = round(realTranslation.mul(UV_SCALE));
+			subapertureImage = lightfield.getSubapertureImageI(u, v);
 
-			subapertureImage = lightfield.getSubapertureImageF(srcAngles[0], srcAngles[1]);
+			// shift sub-aperture image by (u, v) * (1 - 1 / alpha) from center
+			translation = (Vec2f(u, v) - angularCorrection) * weight;
+			translation += this->fromCornerToCenter;
+			dstTri[0] = Point2f(0 + translation[0], 0 + translation[1]);
+			dstTri[1] = Point2f(1 + translation[0], 0 + translation[1]);
+			dstTri[2] = Point2f(0 + translation[0], 1 + translation[1]);
+			transformation = getAffineTransform(UNIT_VECTORS, dstTri);
 
-			appendRayCountingChannel(subapertureImage);
+			ocl::warpAffine(subapertureImage, modifiedSubapertureImage,
+				transformation, imageSize, INTER_LINEAR);
 
-			dstCorner	= dstCenter + dstTranslation + fromCenterToCorner;
-			dstRect		= Rect(Point(dstCorner), saSize);
-			dstROI		= oclMat(image, dstRect);
+			// TODO append before warping
+			appendRayCountingChannel(modifiedSubapertureImage);
 
-			ocl::add(subapertureImage, dstROI, dstROI);
+			ocl::add(modifiedSubapertureImage, image, image);
 		}
 	}
 
 	// cut image to spartial resolution
-	Rect srcRect	= Rect(srcCornerPoint, saSize);
-	oclMat srcROI	= oclMat(image, srcRect);
+	oclMat srcROI	= oclMat(image, cutRect);
+	oclMat cutImage;	srcROI.copyTo(cutImage);
 
 	// scale luminance/color values to fit inside [0, 1]
-	normalizeByRayCount(srcROI);
+	normalizeByRayCount(cutImage);
 
-	return srcROI;
+	return cutImage;
 }
