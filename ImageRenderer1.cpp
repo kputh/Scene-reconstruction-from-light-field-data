@@ -67,8 +67,10 @@ oclMat ImageRenderer1::renderImage() const
 		return image;
 	}
 
-	oclMat image = oclMat(imageSize, imageType, Scalar(0, 0));
-	oclMat subapertureImage, modifiedSubapertureImage;
+	oclMat image = oclMat(imageSize, lightfield.IMAGE_TYPE,
+		lightfield.ZERO_LUMINANCE);
+	oclMat rayCountAccumulator = oclMat(imageSize, CV_32FC1, Scalar(0));
+	oclMat subapertureImage, modifiedSubapertureImage, rayCountMat;
 	Vec2f translation;
 	Point2f dstTri[3];
 	Mat transformation;
@@ -91,19 +93,19 @@ oclMat ImageRenderer1::renderImage() const
 			ocl::warpAffine(subapertureImage, modifiedSubapertureImage,
 				transformation, imageSize, INTER_LINEAR);
 
-			// TODO append before warping
-			appendRayCountingChannel(modifiedSubapertureImage);
+			rayCountMat = extractRayCountMat(modifiedSubapertureImage);
 
 			ocl::add(modifiedSubapertureImage, image, image);
+			ocl::add(rayCountMat, rayCountAccumulator, rayCountAccumulator);
 		}
 	}
+
+	// normalize each pixel by ray count
+	normalizeByRayCount(image, rayCountAccumulator);
 
 	// cut image to spartial resolution
 	oclMat srcROI	= oclMat(image, cutRect);
 	oclMat cutImage;	srcROI.copyTo(cutImage);
-
-	// scale luminance/color values to fit inside [0, 1]
-	normalizeByRayCount(cutImage);
 
 	return cutImage;
 }

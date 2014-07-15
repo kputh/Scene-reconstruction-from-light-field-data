@@ -145,3 +145,36 @@ void normalizeByRayCount(oclMat& image)
 
 	ocl::merge(channels, image);
 }
+
+
+oclMat extractRayCountMat(const oclMat& image)
+{
+	vector<oclMat> channels;
+	ocl::split(image, channels);
+
+	const Scalar zero = Scalar(0);
+	oclMat sum = oclMat(image.size(), image.type(), zero);
+	for (int i = 0; i < channels.size(); i++)
+	{
+		ocl::add(channels[i], sum, sum);
+	}
+
+	oclMat rayCountMat;
+	ocl::threshold(sum, rayCountMat, 0, 1, THRESH_BINARY);
+
+	return rayCountMat;
+}
+
+
+void normalizeByRayCount(oclMat& image, const oclMat& rayCountMat)
+{
+	vector<oclMat> channels;
+	ocl::split(image, channels);
+
+	for (int i = 0; i < channels.size(); i++)
+	{
+		ocl::divide(channels[i], rayCountMat, channels[i]);
+	}
+
+	ocl::merge(channels, image);
+}
