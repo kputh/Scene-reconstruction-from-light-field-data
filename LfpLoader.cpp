@@ -1,6 +1,5 @@
 #include "LfpLoader.h"
 #include "lfpsplitter.c"
-#include "document.h"
 #include <iostream>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -19,29 +18,29 @@ LfpLoader::LfpLoader(const string& path)
 {
 	// 1) split raw file
 	const char* cFileName = path.c_str();
-    char *period = NULL;
-    lfp_file_p lfp = NULL;
+	char *period = NULL;
+	lfp_file_p lfp = NULL;
 
-    if (!(lfp = lfp_create(cFileName))) {
+	if (!(lfp = lfp_create(cFileName))) {
 		lfp_close(lfp);
 		throw new std::runtime_error("Failed to open file.");
-    }
-    
-    if (!lfp_file_check(lfp)) {
+	}
+	
+	if (!lfp_file_check(lfp)) {
 		lfp_close(lfp);
 		throw new std::runtime_error("File is no LFP raw file.");
-    }
-    
+	}
+	
 	/*
-    // save the first part of the filename to name the jpgs later
-    if (!(lfp->filename = strdup(cFileName))) {
-        lfp_close(lfp);
+	// save the first part of the filename to name the jpgs later
+	if (!(lfp->filename = strdup(cFileName))) {
+		lfp_close(lfp);
 		throw new std::runtime_error("Error extracting filename.");
-    }
-    period = strrchr(lfp->filename,'.');
-    if (period) *period = '\0';
+	}
+	period = strrchr(lfp->filename,'.');
+	if (period) *period = '\0';
 	*/
-    lfp_parse_sections(lfp);
+	lfp_parse_sections(lfp);
 
 	// 2) extract image metadata
 	int width, height, imageLength;
@@ -50,12 +49,12 @@ LfpLoader::LfpLoader(const string& path)
 	for (lfp_section_p section = lfp->sections; section != NULL; section = section->next)
 	{
 		switch (section->type) {
-            case LFP_RAW_IMAGE:
+			case LFP_RAW_IMAGE:
 				image = section->data;
 				imageLength = section->len;
-                break;
-            
-            case LFP_JSON:
+				break;
+			
+			case LFP_JSON:
 				doc.Parse<0>(section->data);
 
 				if (doc.HasParseError())
@@ -64,16 +63,25 @@ LfpLoader::LfpLoader(const string& path)
 					throw new std::runtime_error("A JSON parsing error occured.");
 				}
 
+				// if this is JSON document 1
 				if (doc.HasMember(IMAGE_KEY))
 				{
-					height = doc[IMAGE_KEY][HEIGHT_KEY].GetInt();
-					width = doc[IMAGE_KEY][WIDTH_KEY].GetInt();
+					const rapidjson::Value& image = doc[IMAGE_KEY];
+					height = image[HEIGHT_KEY].GetInt();
+					width = image[WIDTH_KEY].GetInt();
+
+					readMetadata(doc);
+				}
+				// if this is JSON document 2
+				else if (doc["camera"].HasMember("serialNumber"))
+				{
+					this->cameraSerialNumber = doc["camera"]["serialNumber"].GetString();
 				}
 
 				break;
-        }
+		}
 	}
-    
+	
 	if (width == NULL || height == NULL || image == NULL || imageLength == NULL)
 	{
 		lfp_close(lfp);
@@ -81,34 +89,35 @@ LfpLoader::LfpLoader(const string& path)
 	}
 
 	// 3) extract image to Mat
-    int buflen = 0;
+	int buflen = 0;
 	char *buf;
 	buf = converted_image((unsigned char *)image, &buflen, imageLength);
 	Mat bayerImage(height, width, CV_16UC1, (unsigned short*) buf);
 	lfp_close(lfp);
 
 	this->bayerImage = bayerImage;
-
-	// TODO read metadata from file
-	/*
-	this->pixelPitch	= doc["devices"]["sensor"]["pixelPitch"].GetDouble();
-	this->lensPitch		= doc["devices"]["mla"]["lensPitch"].GetDouble();
-	this->rotationAngle	= doc["devices"]["mla"]["rotation"].GetDouble();
-	this->scaleFactorX	= doc["devices"]["mla"]["scaleFactor"]["x"].GetDouble();
-	this->scaleFactorY	= doc["devices"]["mla"]["scaleFactor"]["y"].GetDouble();
-	this->sensorOffsetX	= doc["devices"]["mla"]["sensorOffset"]["x"].GetDouble();
-	this->sensorOffsetY	= doc["devices"]["mla"]["sensorOffset"]["y"].GetDouble();
-	*/
-
-	this->pixelPitch	= 0.0000013999999761581417;
-	this->focalLength	= 0.0068200001716613766;
-	this->lensPitch		= 0.00001389859962463379;
-	this->rotationAngle	= 0.002145454753190279;
-	this->scaleFactor	= Vec2d(1.0, 1.0014984607696533);
-	this->sensorOffset	= Vec3d(0.0000018176757097244258, -0.0000040150876045227051, 0.000025);
 }
 
 
 LfpLoader::~LfpLoader(void)
 {
+}
+
+
+void LfpLoader::readMetadata(const rapidjson::Document& doc)
+{
+	const rapidjson::Value& devices = doc["devices"];
+	const rapidjson::Value& mla = devices["mla"];
+	const rapidjson::Value& scaleFactor = mla["scaleFactor"];
+	const rapidjson::Value& sensorOffset = mla["sensorOffset"];
+
+	this->pixelPitch	= devices["sensor"]["pixelPitch"].GetDouble();
+	this->focalLength	= devices["lens"]["focalLength"].GetDouble();
+	this->lensPitch		= mla["lensPitch"].GetDouble();
+	this->rotationAngle	= mla["rotation"].GetDouble();
+	this->scaleFactor	= Vec2d(scaleFactor["x"].GetDouble(),
+		scaleFactor["y"].GetDouble());
+	this->sensorOffset	= Vec3d(sensorOffset["x"].GetDouble(),
+		sensorOffset["y"].GetDouble(),
+		sensorOffset["z"].GetDouble());
 }
