@@ -18,16 +18,16 @@ class ImageRenderer1 :
 	public ImageRenderer
 {
 	static const float ACCUMULATOR_SCALE;
-	static const Point2f UNIT_VECTORS[3];
 
 	double weight;
-	Size imageSize;
 	int imageType;
 	Vec2f angularCorrection;
 	Vec2f fromCornerToCenter;
-	Rect cutRect;
 
 public:
+	Size imageSize;
+	Rect cutRect;
+
 	ImageRenderer1(void);
 	~ImageRenderer1(void);
 

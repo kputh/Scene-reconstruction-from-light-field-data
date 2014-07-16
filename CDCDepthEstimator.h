@@ -1,7 +1,7 @@
 #pragma once
 
 #include "mrf.h"
-#include "ImageRenderer.h"
+#include "ImageRenderer1.h"
 #include "DepthEstimator.h"
 
 /**
@@ -27,26 +27,36 @@ class CDCDepthEstimator :
 	static const float LAMBDA_SMOOTH;
 	static const double CONVERGENCE_FRACTION;
 
-	// required for OpenCV's filter2D()
+	// required for OpenCV's filter2D(), used for averaging over a window
 	static const int DDEPTH;
 	static const Point WINDOW_CENTER;
 	static const int BORDER_TYPE;
 	static const Mat DEFOCUS_WINDOW;
 	static const Mat CORRESPONDENCE_WINDOW;
 
+	// used for defocus response calculation
+	static const int LAPLACIAN_KERNEL_SIZE;
+	static const Mat LoG;
+
+	static const int MAT_TYPE;
+
 	typedef Vec2f fPair;
 	
-	ImageRenderer* renderer;
+	ImageRenderer1* renderer;
 
-	void addAlphaData(oclMat& response, float alpha);
-	void calculateDefocusResponse(const LightFieldPicture& lightfield,
-		oclMat& response, float alpha, const oclMat& refocusedImage);
-	void calculateCorrespondenceResponse(const LightFieldPicture& lightfield,
-		oclMat& response, float alpha, const oclMat& refocusedImage);
-	oclMat argMaxAlpha(const vector<oclMat>& responses) const;
-	oclMat argMinAlpha(const vector<oclMat>& responses) const;
-	oclMat calculateConfidence(const oclMat& extrema);
-	oclMat getFirstExtremum(const oclMat& extrema);
+	Size imageSize;
+	Vec2f angularCorrection;
+	Vec2f fromCornerToCenter;
+	int Nuv;
+
+	oclMat depthMap;
+	oclMat confidenceMap;
+	oclMat extendedDepthOfFieldImage;
+
+	oclMat calculateDefocusResponse(const LightFieldPicture& lightfield,
+		const oclMat& refocusedImage, const float alpha);
+	oclMat calculateCorrespondenceResponse(const LightFieldPicture& lightfield,
+		const oclMat& refocusedImage, const float alpha);
 	void normalizeConfidence(oclMat& confidence1, oclMat& confidence2);
 	oclMat mrf(const oclMat& depth1, const oclMat& depth2,
 		const oclMat& confidence1, const oclMat& confidence2);
@@ -61,5 +71,8 @@ public:
 	~CDCDepthEstimator(void);
 
 	oclMat estimateDepth(const LightFieldPicture& lightfield);
+	oclMat getDepthMap() const;
+	oclMat getConfidenceMap() const;
+	oclMat getExtendedDepthOfFieldImage() const;
 };
 

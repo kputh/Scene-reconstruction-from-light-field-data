@@ -6,6 +6,9 @@
 
 #include "LightFieldPicture.h"
 
+const Point2f UNIT_VECTORS[3] = { Point2f(0, 0), Point2f(1, 0),
+	Point2f(0, 1) };
+
 double round(double value);
 Vec2d round(Vec2d vector);
 double roundTo(double value, double target);

@@ -5,8 +5,6 @@
 
 
 const float ImageRenderer1::ACCUMULATOR_SCALE = 1.2;
-const Point2f ImageRenderer1::UNIT_VECTORS[3] = { Point2f(0, 0), Point2f(1, 0),
-	Point2f(0, 1) };
 
 
 ImageRenderer1::ImageRenderer1(void)
@@ -102,10 +100,12 @@ oclMat ImageRenderer1::renderImage() const
 
 	// normalize each pixel by ray count
 	normalizeByRayCount(image, rayCountAccumulator);
-
+	/*
 	// cut image to spartial resolution
 	oclMat srcROI	= oclMat(image, cutRect);
 	oclMat cutImage;	srcROI.copyTo(cutImage);
 
 	return cutImage;
+	*/
+	return image;
 }

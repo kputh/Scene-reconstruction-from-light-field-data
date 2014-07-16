@@ -44,7 +44,7 @@ int main( int argc, char** argv )
 
 		/*
 		ImageRenderer1 renderer = ImageRenderer1();
-		renderer.setAlpha(1.0);
+		renderer.setAlpha(1.5);
 		renderer.setLightfield(lf);
 
 		t0 = (double)getTickCount();
@@ -55,16 +55,16 @@ int main( int argc, char** argv )
 		cout << "Rendering took " << d0 << " seconds." << endl;
 		
 		ocl1.download(image1);
-		lf.getSubapertureImageI(5,5).download(image1);
+		//lf.getSubapertureImageI(5,5).download(image1);
 		string window1 = "refocused image";
 		namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
 		imshow(window1, image1);
 		waitKey(0);
 		*/
-
+		
 		DepthEstimator* estimator = new CDCDepthEstimator;
 		image1 = estimator->estimateDepth(lf);
-
+		
 		/*
 		ImageRenderer3 renderer = ImageRenderer3();
 		renderer.setLightfield(lf);
