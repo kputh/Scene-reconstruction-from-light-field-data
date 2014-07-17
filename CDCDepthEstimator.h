@@ -40,6 +40,10 @@ class CDCDepthEstimator :
 
 	static const int MAT_TYPE;
 
+	// used for MRF propagation
+	static vector<MRF::CostVal> dataCost1;
+	static vector<MRF::CostVal> dataCost2;
+
 	typedef Vec2f fPair;
 	
 	ImageRenderer1* renderer;
@@ -47,7 +51,7 @@ class CDCDepthEstimator :
 	Size imageSize;
 	Vec2f angularCorrection;
 	Vec2f fromCornerToCenter;
-	int Nuv;
+	double NuvMultiplier;
 
 	oclMat depthMap;
 	oclMat confidenceMap;
@@ -60,8 +64,8 @@ class CDCDepthEstimator :
 	void normalizeConfidence(oclMat& confidence1, oclMat& confidence2);
 	oclMat mrf(const oclMat& depth1, const oclMat& depth2,
 		const oclMat& confidence1, const oclMat& confidence2);
-	Mat pickDepthWithMaxConfidence(Mat& depth1, Mat& depth2,
-		Mat& confidence1, Mat& confidence2);
+	oclMat pickLabelWithMaxConfidence(const oclMat& confidence1,
+		const oclMat& confidence2) const;
 
 	static MRF::CostVal dataCost(int pix, MRF::Label i);
 	static MRF::CostVal fnCost(int pix1, int pix2, MRF::Label i, MRF::Label j);
