@@ -41,8 +41,7 @@ class CDCDepthEstimator :
 	static const int MAT_TYPE;
 
 	// used for MRF propagation
-	static vector<MRF::CostVal> dataCost1;
-	static vector<MRF::CostVal> dataCost2;
+	static vector<MRF::CostVal> dataCost1, dataCost2, fsCost1, fsCost2;
 
 	typedef Vec2f fPair;
 	
