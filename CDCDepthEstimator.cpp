@@ -5,6 +5,7 @@
 #include <opencv2/highgui/highgui.hpp>	// debugging
 #include "mrf.h"
 #include "MaxProdBP.h"
+#include "BP-S.h"	// does it work better than BP-M?
 #include "ImageRenderer1.h"
 #include "CDCDepthEstimator.h"
 #include "Util.h"
@@ -24,10 +25,10 @@ const int CDCDepthEstimator::DDEPTH					= -1;
 const Point CDCDepthEstimator::WINDOW_CENTER		= Point (-1, -1);
 const int CDCDepthEstimator::BORDER_TYPE			= BORDER_REPLICATE;
 const Mat CDCDepthEstimator::DEFOCUS_WINDOW
-	= Mat(DEFOCUS_WINDOW_SIZE, CV_32F,
+	= Mat(DEFOCUS_WINDOW_SIZE, CV_32FC1,
 	Scalar(1 / (float) DEFOCUS_WINDOW_SIZE.area()));
 const Mat CDCDepthEstimator::CORRESPONDENCE_WINDOW
-	= Mat(CORRESPONDENCE_WINDOW_SIZE, CV_32F,
+	= Mat(CORRESPONDENCE_WINDOW_SIZE, CV_32FC1,
 	Scalar(1 / (float) CORRESPONDENCE_WINDOW_SIZE.area()));
 
 const int CDCDepthEstimator::LAPLACIAN_KERNEL_SIZE = 9;
@@ -161,7 +162,6 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	//normalizeConfidence(defocusConfidence, correspondenceConfidence);
 
 	// 3) global operation to combine cues
-	
 	oclMat labels = mrf(defocusAlpha, correspondenceAlpha,
 		defocusConfidence, correspondenceConfidence);
 	
@@ -169,6 +169,7 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	oclMat labels = pickLabelWithMaxConfidence(defocusConfidence,
 		correspondenceConfidence);
 	*/
+
 	// translate label map into depth map
 	oclMat alphaMap, confidenceMap, extendedDepthOfFieldImage;
 
@@ -185,24 +186,29 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	// 4) compute actual depth from alpha values
 	oclMat depthMap;
 	ocl::multiply(lightfield.getRawFocalLength(), alphaMap, depthMap);
+
+	// lens equation:		1/f = 1/d_obj + 1/d_img
+	// derived equation:	d_obj = (f * d_img) / (d_img - f)
+	// d_img is unknown
 	// TODO
 
-	// TODO/debug save to attributes
+	// debugging
+	/*
 	//renderer->setFocalLength(?);
 	oclMat image = renderer->renderImage();
 
 	Mat m;
+	
 	defocusAlpha.download(m); normalize(m,m,0,1,NORM_MINMAX);
 	string window1 = "depth (alpha) from defocus";
 	namedWindow(window1, WINDOW_NORMAL);
 	imshow(window1, m);
-
+	
 	correspondenceAlpha.download(m); normalize(m,m,0,1,NORM_MINMAX);
 	string window2 = "depth (alpha) from correspondence";
 	namedWindow(window2, WINDOW_NORMAL);
 	imshow(window2, m);
 	
-	/*
 	defocusConfidence.download(m);
 	//normalize(m,m,0,1,NORM_MINMAX);
 	string window3 = "confidence from defocus";
@@ -214,12 +220,12 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	string window4 = "confidence from correspondence";
 	namedWindow(window4, WINDOW_NORMAL);
 	imshow(window4, m);
-
+	
 	image.download(m);
 	string window5 = "central perspective";
 	namedWindow(window5, WINDOW_NORMAL);
 	imshow(window5, m);
-	*/
+	
 	alphaMap.download(m); normalize(m,m,0,1,NORM_MINMAX);
 	string window6 = "combined alpha map";
 	namedWindow(window6, WINDOW_NORMAL);
@@ -234,18 +240,30 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	string window8 = "extended Depth Of Field Image";
 	namedWindow(window8, WINDOW_NORMAL);
 	imshow(window8, m);
-	*/
-
+	
 	labels.download(m); m.convertTo(m, CV_32FC1);
 	string window9 = "labels";
 	namedWindow(window9, WINDOW_NORMAL);
 	imshow(window9, m);
-
+	
 	waitKey(0);
+	*/
 	
 
 	// crop all resulting Mats
-	// TODO
+	const int width = lightfield.SPARTIAL_RESOLUTION.width;
+	const int height = lightfield.SPARTIAL_RESOLUTION.height;
+	const int cropLeft = (depthMap.size().width - width) / 2;
+	const int cropTop = (depthMap.size().height - height) / 2;
+	const Rect cropRect = Rect(cropLeft, cropTop, width, height);
+
+	oclMat oclm;
+	oclm = oclMat(depthMap, cropRect);
+	oclm.copyTo(depthMap);
+	oclm = oclMat(confidenceMap, cropRect);
+	oclm.copyTo(confidenceMap);
+	oclm = oclMat(extendedDepthOfFieldImage, cropRect);
+	oclm.copyTo(extendedDepthOfFieldImage);
 
 	this->depthMap					= depthMap;
 	this->confidenceMap				= confidenceMap;
@@ -265,17 +283,25 @@ oclMat CDCDepthEstimator::calculateDefocusResponse(
 	
 	//ocl::Scharr(refocusedImage, d2x, CV_32FC1, 1, 0, LAPLACIAN_KERNEL_SIZE);
 	//ocl::Scharr(refocusedImage, d2y, CV_32FC1, 0, 1, LAPLACIAN_KERNEL_SIZE);
-	//ocl::Sobel(refocusedImage, d2x, CV_32FC1, 2, 0, LAPLACIAN_KERNEL_SIZE);
-	//ocl::Sobel(refocusedImage, d2y, CV_32FC1, 0, 2, LAPLACIAN_KERNEL_SIZE);
-	//response = d2x + d2y;
-	
+	ocl::Sobel(refocusedImage, d2x, CV_32FC1, 2, 0, LAPLACIAN_KERNEL_SIZE);
+	ocl::Sobel(refocusedImage, d2y, CV_32FC1, 0, 2, LAPLACIAN_KERNEL_SIZE);
+	response = d2x + d2y;
+
+	/*
+	ocl::multiply(d2x, d2x, d2x);
+	ocl::multiply(d2y, d2y, d2y);
+	ocl::add(d2x, d2y, response);
+	ocl::pow(response, 0.5, response);
+	*/
+
+	/*
 	ocl::filter2D(refocusedImage, response, DDEPTH, LoG,
 		WINDOW_CENTER, 0, BORDER_TYPE);
+	*/
 
 	ocl::abs(response, response);
 	ocl::filter2D(response, response, DDEPTH, DEFOCUS_WINDOW,
 		WINDOW_CENTER, 0, BORDER_TYPE);
-
 	return response;
 }
 
@@ -323,12 +349,10 @@ oclMat CDCDepthEstimator::calculateCorrespondenceResponse(
 	ocl::pow(variance, 0.5, standardDeviation);	// es gibt kein ocl::sqrt()
 	ocl::filter2D(standardDeviation, confidence, DDEPTH, CORRESPONDENCE_WINDOW,
 		WINDOW_CENTER, 0, BORDER_TYPE);
-
 	/*
 	ocl::filter2D(variance, confidence, DDEPTH, CORRESPONDENCE_WINDOW,
 		WINDOW_CENTER, 0, BORDER_TYPE);
 	*/
-	
 	return confidence;
 }
 
@@ -363,14 +387,16 @@ oclMat CDCDepthEstimator::pickLabelWithMaxConfidence(const oclMat& confidence1,
 
 MRF::CostVal CDCDepthEstimator::dataCost(int pix, MRF::Label i)
 {
+	//return 0;
+
 	switch (i)
 	{
 	case 0:
-		//return CDCDepthEstimator::dataCost1[pix];
-		return CDCDepthEstimator::dataCost1[pix] + CDCDepthEstimator::fsCost1[pix];
+		return CDCDepthEstimator::dataCost1[pix];
+		//return CDCDepthEstimator::dataCost1[pix] + CDCDepthEstimator::fsCost1[pix];
 	case 1:
-		//return CDCDepthEstimator::dataCost2[pix];
-		return CDCDepthEstimator::dataCost2[pix] + CDCDepthEstimator::fsCost2[pix];
+		return CDCDepthEstimator::dataCost2[pix];
+		//return CDCDepthEstimator::dataCost2[pix] + CDCDepthEstimator::fsCost2[pix];
 	default:
 		return 0;
 	}
@@ -382,16 +408,19 @@ MRF::CostVal CDCDepthEstimator::fnCost(int pix1, int pix2,
 {
 	return 0;
 
+	/*
 	if (pix1 > pix2)
 	{
 		int tmp = pix1; pix1 = pix2; pix2 = tmp;
 		tmp = i; i = j; j = tmp;
 	}
-
+	*/
+	/*
 	if (pix1 == pix2)
 		return 0;
+	*/
 
-	switch (i)
+	switch (j)
 	{
 	case 0:
 		return CDCDepthEstimator::fsCost1[pix2];
@@ -434,6 +463,12 @@ oclMat CDCDepthEstimator::mrf(const oclMat& depth1, const oclMat& depth2,
 	ocl::abs(laplacian, laplacian);
 	ocl::multiply(LAMBDA_SMOOTH, laplacian, smoothnessCost);
 
+	oclMat fsCost;
+	ocl::add(flatnessCost, smoothnessCost, fsCost);
+	Mat filter = Mat(3, 3, CV_32FC1, Scalar(1));
+	ocl::filter2D(fsCost, fsCost, CV_32FC1, filter);
+	ocl::add(dataCost, fsCost, totalCost);
+
 	/*
 	ocl::add(dataCost, flatnessCost, totalCost);
 	ocl::add(totalCost, smoothnessCost, totalCost);
@@ -441,7 +476,7 @@ oclMat CDCDepthEstimator::mrf(const oclMat& depth1, const oclMat& depth2,
 	totalCost.download(tmpMat);
 	tmpMat.reshape(1, 1).copyTo(CDCDepthEstimator::dataCost1);
 	*/
-	dataCost.download(tmpMat);
+	totalCost.download(tmpMat);
 	tmpMat.reshape(1, 1).copyTo(CDCDepthEstimator::dataCost1);
 	ocl::add(flatnessCost, smoothnessCost, totalCost);
 	totalCost.download(tmpMat);
@@ -449,12 +484,14 @@ oclMat CDCDepthEstimator::mrf(const oclMat& depth1, const oclMat& depth2,
 
 	// debugging
 	double maxVal, minVal;
-	ocl::minMaxLoc(dataCost, &minVal, &maxVal);
-	printf("dataCost in [%g, %g]\n", minVal, maxVal);
-	ocl::minMaxLoc(flatnessCost, &minVal, &maxVal);
-	printf("flatnessCost in [%g, %g]\n", minVal, maxVal);
-	ocl::minMaxLoc(smoothnessCost, &minVal, &maxVal);
-	printf("smoothnessCost in [%g, %g]\n", minVal, maxVal);
+	oclMat maxMat, defocusDataCost, defocusFlatnessCost, defocusSmoothnessCost,
+		defocusTotalCost;
+	ocl::max(flatnessCost, smoothnessCost, maxMat);
+	ocl::max(dataCost, maxMat, maxMat);
+	dataCost.copyTo(defocusDataCost);
+	flatnessCost.copyTo(defocusFlatnessCost);
+	totalCost.copyTo(defocusTotalCost);
+	smoothnessCost.copyTo(defocusSmoothnessCost);
 
 
 	// calculate cost for corresponence solution
@@ -473,6 +510,10 @@ oclMat CDCDepthEstimator::mrf(const oclMat& depth1, const oclMat& depth2,
 	ocl::abs(laplacian, laplacian);
 	ocl::multiply(LAMBDA_SMOOTH, laplacian, smoothnessCost);
 
+	ocl::add(flatnessCost, smoothnessCost, fsCost);
+	ocl::filter2D(fsCost, fsCost, CV_32FC1, filter);
+	ocl::add(dataCost, fsCost, totalCost);
+
 	/*
 	ocl::add(dataCost, flatnessCost, totalCost);
 	ocl::add(totalCost, smoothnessCost, totalCost);
@@ -481,20 +522,92 @@ oclMat CDCDepthEstimator::mrf(const oclMat& depth1, const oclMat& depth2,
 	tmpMat.reshape(1, 1).copyTo(CDCDepthEstimator::dataCost2);
 	*/
 
-	dataCost.download(tmpMat);
+	totalCost.download(tmpMat);
 	tmpMat.reshape(1, 1).copyTo(CDCDepthEstimator::dataCost2);
 	ocl::add(flatnessCost, smoothnessCost, totalCost);
 	totalCost.download(tmpMat);
 	tmpMat.reshape(1, 1).copyTo(CDCDepthEstimator::fsCost2);
 
 	// debugging
-	//double maxVal, minVal;
-	ocl::minMaxLoc(dataCost, &minVal, &maxVal);
-	printf("dataCost in [%g, %g]\n", minVal, maxVal);
-	ocl::minMaxLoc(flatnessCost, &minVal, &maxVal);
-	printf("flatnessCost in [%g, %g]\n", minVal, maxVal);
-	ocl::minMaxLoc(smoothnessCost, &minVal, &maxVal);
-	printf("smoothnessCost in [%g, %g]\n", minVal, maxVal);
+	/*
+	ocl::max(flatnessCost, maxMat, maxMat);
+	ocl::max(smoothnessCost, maxMat, maxMat);
+	ocl::max(dataCost, maxMat, maxMat);
+	ocl::minMaxLoc(maxMat, &minVal, &maxVal);
+
+	double multiplier = 1. / maxVal;
+	ocl::multiply(multiplier, defocusDataCost, defocusDataCost);
+	ocl::multiply(multiplier, defocusSmoothnessCost, defocusSmoothnessCost);
+	ocl::multiply(multiplier, defocusFlatnessCost, defocusFlatnessCost);
+	ocl::multiply(multiplier, dataCost, dataCost);
+	ocl::multiply(multiplier, smoothnessCost, smoothnessCost);
+	ocl::multiply(multiplier, flatnessCost, flatnessCost);
+
+	Mat m;
+	//defocusDataCost.download(m);
+	//string window1 = "norm. data cost for defocus";
+	defocusTotalCost.download(m);
+	string window1 = "norm. total cost for defocus";
+	namedWindow(window1, WINDOW_NORMAL);
+	imshow(window1, m);
+	
+	defocusSmoothnessCost.download(m);
+	string window2 = "norm. smoothness cost for defocus";
+	namedWindow(window2, WINDOW_NORMAL);
+	imshow(window2, m);
+
+	defocusFlatnessCost.download(m);
+	string window3 = "norm. flatness cost for defocus";
+	namedWindow(window3, WINDOW_NORMAL);
+	imshow(window3, m);
+	
+	//dataCost.download(m);
+	//string window4 = "norm. data cost for correspondence";
+	totalCost.download(m);
+	string window4 = "norm. total cost for correspondence";
+	namedWindow(window4, WINDOW_NORMAL);
+	imshow(window4, m);
+	
+	smoothnessCost.download(m);
+	string window5 = "norm. smoothness cost for correspondence";
+	namedWindow(window5, WINDOW_NORMAL);
+	imshow(window5, m);
+
+	flatnessCost.download(m);
+	string window6 = "norm. flatness cost for correspondence";
+	namedWindow(window6, WINDOW_NORMAL);
+	imshow(window6, m);
+	
+	ocl::max(depth1, depth2, maxMat);
+	ocl::minMaxLoc(maxMat, &minVal, &maxVal);
+	multiplier = 1. / maxVal;
+
+	depth1.download(m); m *= multiplier;
+	string window7 = "depth from defocus";
+	namedWindow(window7, WINDOW_NORMAL);
+	imshow(window7, m);
+
+	depth2.download(m); m *= multiplier;
+	string window8 = "depth from correspondence";
+	namedWindow(window8, WINDOW_NORMAL);
+	imshow(window8, m);
+
+	ocl::max(confidence1, confidence2, maxMat);
+	ocl::minMaxLoc(maxMat, &minVal, &maxVal);
+	multiplier = 1. / maxVal;
+
+	confidence1.download(m); m *= multiplier;
+	string window9 = "confidence from defocus";
+	namedWindow(window9, WINDOW_NORMAL);
+	imshow(window9, m);
+
+	confidence2.download(m); m *= multiplier;
+	string window10 = "confidence from correspondence";
+	namedWindow(window10, WINDOW_NORMAL);
+	imshow(window10, m);
+
+	//waitKey(0);
+	*/
 
 	// define/generate complete cost function
 	DataCost *data         = new DataCost(&CDCDepthEstimator::dataCost);
@@ -502,7 +615,8 @@ oclMat CDCDepthEstimator::mrf(const oclMat& depth1, const oclMat& depth2,
 	energy = new EnergyFunction(data, smooth);
 
 	// compute optimized depth map (labeling)
-	mrf = new MaxProdBP(depth1.size().width, depth1.size().height, 2, energy);
+	//mrf = new MaxProdBP(depth1.size().width, depth1.size().height, 2, energy);
+	mrf = new BPS(depth1.size().width, depth1.size().height, 2, energy);
 	mrf->initialize();
 	mrf->clearAnswer();
 	

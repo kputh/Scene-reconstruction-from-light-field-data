@@ -146,6 +146,8 @@
     <ClCompile Include="CDCDepthEstimator.cpp" />
     <ClCompile Include="DepthEstimator.cpp" />
     <ClCompile Include="DepthEstimator1.cpp" />
+    <ClCompile Include="DepthToPointTranslator.cpp" />
+    <ClCompile Include="DepthToPointTranslator1.cpp" />
     <ClCompile Include="ImageRenderer.cpp" />
     <ClCompile Include="ImageRenderer1.cpp" />
     <ClCompile Include="ImageRenderer2.cpp" />
@@ -174,6 +176,8 @@
     <ClInclude Include="CDCDepthEstimator.h" />
     <ClInclude Include="DepthEstimator.h" />
     <ClInclude Include="DepthEstimator1.h" />
+    <ClInclude Include="DepthToPointTranslator.h" />
+    <ClInclude Include="DepthToPointTranslator1.h" />
     <ClInclude Include="ImageRenderer.h" />
     <ClInclude Include="ImageRenderer1.h" />
     <ClInclude Include="ImageRenderer2.h" />

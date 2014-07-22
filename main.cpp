@@ -62,10 +62,33 @@ int main( int argc, char** argv )
 		waitKey(0);
 		*/
 		
-		DepthEstimator* estimator = new CDCDepthEstimator;
-		image1 = estimator->estimateDepth(lf);
-		
+		CDCDepthEstimator* estimator = new CDCDepthEstimator;
+
+		t0 = (double)getTickCount();
+		ocl1 = estimator->estimateDepth(lf);
+		t1 = (double)getTickCount();
+
+		d0 = (t1 - t0) / getTickFrequency();
+		cout << "Depth estimation took " << d0 << " seconds." << endl;
+
+		Mat m; ocl1.download(m); normalize(m, m, 0, 1, NORM_MINMAX);
+		string window1 = "depth map";
+		namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
+		imshow(window1, m);
+
+		waitKey(0);
+
 		/*
+		ocl1.download(image1);
+		saveImageToPNGFile("depthMap.png", image1);
+		
+		estimator->getConfidenceMap().download(image1);
+		saveImageToPNGFile("confidenceMap.png", image1);
+
+		estimator->getExtendedDepthOfFieldImage().download(image1);
+		saveImageToPNGFile("all-in-focus-image.png", image1);
+		*/
+			/*
 		ImageRenderer3 renderer = ImageRenderer3();
 		renderer.setLightfield(lf);
 		renderer.setFocalLength(0.0068200001716613766);

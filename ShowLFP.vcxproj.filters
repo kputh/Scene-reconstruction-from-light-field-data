@@ -108,6 +108,12 @@
     <ClCompile Include="NormalDistribution.cpp">
       <Filter>Image Rendering</Filter>
     </ClCompile>
+    <ClCompile Include="DepthToPointTranslator.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="DepthToPointTranslator1.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Util.h">
@@ -190,6 +196,12 @@
     </ClInclude>
     <ClInclude Include="NormalDistribution.h">
       <Filter>Image Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="DepthToPointTranslator.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="DepthToPointTranslator1.h">
+      <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

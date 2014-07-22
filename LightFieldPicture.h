@@ -61,5 +61,7 @@ public:
 	oclMat getSubapertureImageAtlas() const;
 
 	double getRawFocalLength() const;
+
+	Mat getCalibrationMatrix() const;
 };
 

@@ -266,3 +266,29 @@ double LightFieldPicture::getRawFocalLength() const
 {
 	return this->loader.focalLength;
 }
+
+
+Mat LightFieldPicture::getCalibrationMatrix() const
+{
+	const float imageWidth = this->loader.bayerImage.size().width;
+	const float imageHeight = this->loader.bayerImage.size().height;
+	const float aspectRatio = imageHeight / imageWidth;
+
+	// focal length in pixels
+	const float f = this->loader.focalLength /
+		this->loader.pixelPitch;
+
+	const float af = aspectRatio * f;
+
+	// optical center in pixels
+	const float cx = imageWidth / 2.;
+	const float cy = imageHeight / 2.;
+
+	const float
+
+	float[3][3] K = {
+		{f,	0,	cx},
+		{0,	af,	cy},
+		{0,	0,	1}};
+	Mat calibrationMatrix = Mat(3, 3, CV_32FC1, K);
+}
