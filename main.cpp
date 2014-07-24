@@ -15,6 +15,8 @@
 #include "StereoBMDisparityEstimator.h"
 #include "DepthEstimator1.h"
 #include "CDCDepthEstimator.h"
+#include "DepthToPointTranslator.h"
+#include "DepthToPointTranslator1.h"
 
 using namespace cv;
 using namespace std;
@@ -71,13 +73,19 @@ int main( int argc, char** argv )
 		d0 = (t1 - t0) / getTickFrequency();
 		cout << "Depth estimation took " << d0 << " seconds." << endl;
 
+		DepthToPointTranslator* translator = new DepthToPointTranslator1();
+		oclMat pointCloud = translator->translateDepthToPoints(ocl1, lf);
+
+
+
+		/*
 		Mat m; ocl1.download(m); normalize(m, m, 0, 1, NORM_MINMAX);
 		string window1 = "depth map";
 		namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
 		imshow(window1, m);
 
 		waitKey(0);
-
+		*/
 		/*
 		ocl1.download(image1);
 		saveImageToPNGFile("depthMap.png", image1);

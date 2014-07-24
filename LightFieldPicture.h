@@ -22,7 +22,6 @@ class LightFieldPicture /*:
 {
 	static const Point IMAGE_ORIGIN;
 
-	LfpLoader loader;
 	Mat rawImage;
 	vector<oclMat> subapertureImages;
 	oclMat subapertureImageAtlas;
@@ -42,8 +41,10 @@ public:
 
 	static const luminanceType ZERO_LUMINANCE;
 
-	Size SPARTIAL_RESOLUTION;
+	Size SPARTIAL_RESOLUTION;	// should be lower-case
 	Size ANGULAR_RESOLUTION;
+
+	LfpLoader loader;	// should be private
 
 	LightFieldPicture(void);
 	LightFieldPicture(const string& pathToFile);

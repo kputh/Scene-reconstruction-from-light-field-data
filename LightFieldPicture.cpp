@@ -284,11 +284,11 @@ Mat LightFieldPicture::getCalibrationMatrix() const
 	const float cx = imageWidth / 2.;
 	const float cy = imageHeight / 2.;
 
-	const float
-
-	float[3][3] K = {
+	float K[3][3] = {
 		{f,	0,	cx},
 		{0,	af,	cy},
 		{0,	0,	1}};
 	Mat calibrationMatrix = Mat(3, 3, CV_32FC1, K);
+
+	return calibrationMatrix;
 }
