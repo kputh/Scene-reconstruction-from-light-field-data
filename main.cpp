@@ -2,6 +2,7 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/ocl/ocl.hpp>
+#include <opencv2/viz/vizcore.hpp>
 #include <cmath>
 #include <string>
 #include <iostream>
@@ -34,7 +35,7 @@ int main( int argc, char** argv )
 	}
 
 	Mat rawImage, subapertureImage, image1, image2, image4, image14;
-	oclMat ocl1;
+	oclMat ocl1, ocl2;
 	try {
 		double t0 = (double)getTickCount();
 		LightFieldPicture lf(argv[1]);
@@ -43,7 +44,6 @@ int main( int argc, char** argv )
 		double d0 = (t1 - t0) / getTickFrequency();
 		cout << "Loading of file at " << argv[1] << " successful." << endl;
 		cout << "Loading of light field took " << d0 << " seconds." << endl;
-
 		/*
 		ImageRenderer1 renderer = ImageRenderer1();
 		renderer.setAlpha(1.5);
@@ -74,9 +74,23 @@ int main( int argc, char** argv )
 		cout << "Depth estimation took " << d0 << " seconds." << endl;
 
 		DepthToPointTranslator* translator = new DepthToPointTranslator1();
-		oclMat pointCloud = translator->translateDepthToPoints(ocl1, lf);
+		oclMat oclPoints = translator->translateDepthToPoints(ocl1, lf);
 
+		/// Create a window
+		viz::Viz3d myWindow("Coordinate Frame");
 
+		/// Add coordinate axes
+		myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
+
+		Mat points, image;
+		estimator->getExtendedDepthOfFieldImage().download(image);
+		image.convertTo(image, CV_8U, 255);
+		oclPoints.download(points);
+		viz::WCloud cloudWidget = viz::WCloud(points, image);
+
+		myWindow.showWidget("cloud", cloudWidget);
+
+		myWindow.spin();
 
 		/*
 		Mat m; ocl1.download(m); normalize(m, m, 0, 1, NORM_MINMAX);

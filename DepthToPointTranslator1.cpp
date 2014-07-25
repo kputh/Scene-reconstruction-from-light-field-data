@@ -41,33 +41,10 @@ oclMat DepthToPointTranslator1::translateDepthToPoints(const oclMat& depth,
 	reprojectImageTo3D(depthMap, points, cameraMatrix.inv());
 
 	// 3) scale to compensate the shape of the microlens array
-	const float sx = lightfield.loader.scaleFactor[0];
-	const float sy = lightfield.loader.scaleFactor[1] * cos(M_PI / 3.);
-	float S[3][3] = {
-		{ sx,	0,	0 },
-		{ 0,	sy,	0 },
-		{ 0,	0,	1 }};
-	Mat scalingMatrix = Mat(3, 3, CV_32FC1, S);
-
-	points = scalingMatrix * points;
+	const float sx = 1. / lightfield.loader.scaleFactor[0];
+	const float sy = 1. / lightfield.loader.scaleFactor[1] * cos(M_PI / 3.);
+	const Scalar scale = Scalar(sx, sy, 1);
+	points = points.mul(scale);
 
 	return oclMat(points);
-}
-
-Mat DepthToPointTranslator1::makeCalibrationMatrix(
-	const LightFieldPicture& lightfield, const Size& imageSize) const
-{
-	/*
-	const float focalLengthInPixels = lightfield.loader.focalLength /
-		this->loader.pixelPitch;
-	const float opticalCenterX = lightfield.loader.bayerImage.size().width / 2.;
-	const float opticalCenterX = lightfield.loader.bayerImage.size().height / 2.;
-
-	float K[3][3] = {
-		{focalLengthInPixels,	0,						opticalCenterX},
-		{0,						focalLengthInPixels,	opticalCenterY},
-		{0,						0,						1}};
-	Mat calibrationMatrix = Mat(3, 3, CV_32FC1, K);
-	*/
-	return Mat();
 }

@@ -1,5 +1,6 @@
 #pragma once
-#include "depthtopointtranslator.h"
+
+#include "DepthToPointTranslator.h"
 
 /**
  * The abstract base class for any algorithm that translates reconstructed depth
@@ -12,9 +13,6 @@
 class DepthToPointTranslator1 :
 	public DepthToPointTranslator
 {
-	Mat makeCalibrationMatrix(const LightFieldPicture& lightfield,
-		const Size& imageSize) const;
-
 public:
 	DepthToPointTranslator1(void);
 	~DepthToPointTranslator1(void);
