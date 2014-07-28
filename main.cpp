@@ -80,7 +80,7 @@ int main( int argc, char** argv )
 		viz::Viz3d myWindow("Coordinate Frame");
 
 		/// Add coordinate axes
-		myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
+		//myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
 
 		Mat points, image;
 		estimator->getExtendedDepthOfFieldImage().download(image);
@@ -88,7 +88,30 @@ int main( int argc, char** argv )
 		oclPoints.download(points);
 		viz::WCloud cloudWidget = viz::WCloud(points, image);
 
-		myWindow.showWidget("cloud", cloudWidget);
+		const int width		= points.size().width;
+		const int height	= points.size().height;
+		vector<int> polygons = vector<int>();
+		for (int y = 0; y < height - 1; y++)
+		{
+			for (int x = 0; x < width - 1; x++)
+			{
+				polygons.push_back(3);
+				polygons.push_back(y * width + x);
+				polygons.push_back(y * width + (x + 1));
+				polygons.push_back((y + 1) * width + x);
+
+				polygons.push_back(3);
+				polygons.push_back((y + 1) * width + (x + 1));
+				polygons.push_back((y + 1) * width + x);
+				polygons.push_back(y * width + (x + 1));
+			}
+		}
+		Mat p = Mat(polygons, false);
+		viz::WMesh meshWidget = viz::WMesh(points.reshape(0, 1), polygons,
+			image.reshape(0, 1));
+
+		//myWindow.showWidget("cloud", cloudWidget);
+		myWindow.showWidget("mesh", meshWidget);
 
 		myWindow.spin();
 
