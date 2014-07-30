@@ -21,9 +21,8 @@ CameraPoseEstimator1::~CameraPoseEstimator1(void)
 }
 
 
-vector<Mat> CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
-	const Mat& calibrationMatrix)
-	const
+void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
+	const Mat& calibrationMatrix) const
 {
 	vector<vector<KeyPoint>> keyPoints = vector<vector<KeyPoint>>();
 	vector<Mat> descriptors = vector<Mat>();
@@ -94,6 +93,4 @@ vector<Mat> CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 	}
 
 	// TODO
-
-	return vector<Mat>();
 }

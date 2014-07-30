@@ -1,5 +1,14 @@
 #pragma once
-#include "cameraposeestimator.h"
+
+#include "CameraPoseEstimator.h"
+
+/**
+ * An implementation of camera pose estimation.
+ *
+ * @author      Kai Puth <kai.puth@student.htw-berlin.de>
+ * @version     0.1
+ * @since       2014-07-28
+ */
 class CameraPoseEstimator1 :
 	public CameraPoseEstimator
 {
@@ -12,7 +21,7 @@ public:
 	CameraPoseEstimator1(void);
 	~CameraPoseEstimator1(void);
 
-	vector<Mat> estimateCameraPoses(const vector<Mat>& images,
+	void estimateCameraPoses(const vector<Mat>& images,
 		const Mat& calibrationMatrix) const;
 };
 
