@@ -18,6 +18,8 @@
 #include "CDCDepthEstimator.h"
 #include "DepthToPointTranslator.h"
 #include "DepthToPointTranslator1.h"
+#include "CameraPoseEstimator.h"
+#include "CameraPoseEstimator1.h"
 
 using namespace cv;
 using namespace std;
@@ -44,9 +46,9 @@ int main( int argc, char** argv )
 		double d0 = (t1 - t0) / getTickFrequency();
 		cout << "Loading of file at " << argv[1] << " successful." << endl;
 		cout << "Loading of light field took " << d0 << " seconds." << endl;
-		/*
+		
 		ImageRenderer1 renderer = ImageRenderer1();
-		renderer.setAlpha(1.5);
+		renderer.setAlpha(1.1);
 		renderer.setLightfield(lf);
 
 		t0 = (double)getTickCount();
@@ -57,13 +59,37 @@ int main( int argc, char** argv )
 		cout << "Rendering took " << d0 << " seconds." << endl;
 		
 		ocl1.download(image1);
-		//lf.getSubapertureImageI(5,5).download(image1);
+
+		double minVal, maxVal;
+		minMaxLoc(image1, &minVal, &maxVal);
+		printf("image in [%g, %g]", minVal, maxVal);
+
+		//saveImageToPNGFile("normalizeAfter.png", image1);
+
+		//image1.convertTo(image1, CV_8UC1, 255);
 		string window1 = "refocused image";
 		namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
 		imshow(window1, image1);
+
 		waitKey(0);
-		*/
+		/*
+		CameraPoseEstimator* poseEstimator = new CameraPoseEstimator1();
+		vector<Mat> images = vector<Mat>();
+		for (int i = 0; i < 4; i++)
+			images.push_back(image1);
+		Mat calibrationMatrix = lf.getCalibrationMatrix();
+		poseEstimator->estimateCameraPoses(images, calibrationMatrix);
+
+		for (int i = 0; i < poseEstimator->rotations.size(); i++)
+		{
+			cout << "pose " << i << endl;
+			cout << "rotations = " << poseEstimator->rotations.at(i) << endl;
+			cout << "translations = " << poseEstimator->translations.at(i) << endl;
+		}
+
+		waitKey(0);
 		
+		/*
 		CDCDepthEstimator* estimator = new CDCDepthEstimator;
 
 		t0 = (double)getTickCount();
@@ -72,6 +98,37 @@ int main( int argc, char** argv )
 
 		d0 = (t1 - t0) / getTickFrequency();
 		cout << "Depth estimation took " << d0 << " seconds." << endl;
+
+		ocl1.download(image1);
+		int channels[] = {0};
+		int histSize[] = {CDCDepthEstimator::DEPTH_RESOLUTION};
+		const float range[] = { 0., 2. };
+		const float* ranges[] = { range };
+		calcHist(&image1, 1, channels, Mat(),
+			image2, 1, histSize, ranges, true, false);
+
+		// Draw the histogram
+		int hist_w = 512; int hist_h = 400;
+		int bin_w = cvRound( (double) hist_w/histSize[0] );
+
+		Mat histImage( hist_h, hist_w, CV_8UC3, Scalar( 0,0,0) );
+
+  /// Normalize the result to [ 0, histImage.rows ]
+  normalize(image2, image2, 0, histImage.rows, NORM_MINMAX, -1, Mat() );
+
+  /// Draw for each channel
+  for( int i = 1; i < histSize[0]; i++ )
+  {
+	  line( histImage, Point( bin_w*(i-1), hist_h - cvRound(image2.at<float>(i-1)) ) ,
+					   Point( bin_w*(i), hist_h - cvRound(image2.at<float>(i)) ),
+					   Scalar( 255, 0, 0), 2, 8, 0  );
+  }
+
+  /// Display
+  namedWindow("calcHist Demo", CV_WINDOW_AUTOSIZE );
+  imshow("calcHist Demo", histImage );
+
+  waitKey(0);
 
 		DepthToPointTranslator* translator = new DepthToPointTranslator1();
 		oclMat oclPoints = translator->translateDepthToPoints(ocl1, lf);
@@ -113,16 +170,15 @@ int main( int argc, char** argv )
 		//myWindow.showWidget("cloud", cloudWidget);
 		myWindow.showWidget("mesh", meshWidget);
 
-		myWindow.spin();
-
-		/*
 		Mat m; ocl1.download(m); normalize(m, m, 0, 1, NORM_MINMAX);
-		string window1 = "depth map";
+		string window1 = "normalized depth map";
 		namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
 		imshow(window1, m);
 
+		myWindow.spin();
+
 		waitKey(0);
-		*/
+		
 		/*
 		ocl1.download(image1);
 		saveImageToPNGFile("depthMap.png", image1);

@@ -10,7 +10,7 @@
 #include "LightFieldPicture.h"
 
 
-const int LightFieldPicture::IMAGE_TYPE = CV_32FC1;
+const int LightFieldPicture::IMAGE_TYPE = CV_32FC3;
 const LightFieldPicture::luminanceType LightFieldPicture::ZERO_LUMINANCE = 0;
 
 const Point LightFieldPicture::IMAGE_ORIGIN = Point(0, 0);
@@ -100,10 +100,10 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 
 	// process raw image
 	Mat demosaicedImage;
-	//cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2RGB);
-	cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2GRAY);
+	cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2RGB);
+	//cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2GRAY);
 	demosaicedImage.convertTo(demosaicedImage, IMAGE_TYPE, 1.0 / 65535.0);
-	
+
 	demosaicedImage.copyTo(this->rawImage);
 
 	// get subaperture images

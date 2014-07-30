@@ -62,6 +62,7 @@ oclMat ImageRenderer1::renderImage() const
 			}
 
 		image /= lightfield.ANGULAR_RESOLUTION.area();
+		normalize(image);
 		return image;
 	}
 
@@ -74,11 +75,13 @@ oclMat ImageRenderer1::renderImage() const
 	Mat transformation;
 
 	int u, v;
+	double minVal, maxVal;
 	for(u = 0; u < this->lightfield.ANGULAR_RESOLUTION.width; u++)
 	{
 		for(v = 0; v < this->lightfield.ANGULAR_RESOLUTION.height; v++)
 		{
 			subapertureImage = lightfield.getSubapertureImageI(u, v);
+			//normalize(subapertureImage);
 
 			// shift sub-aperture image by (u, v) * (1 - 1 / alpha) from center
 			translation = (Vec2f(u, v) - angularCorrection) * weight;
@@ -100,6 +103,8 @@ oclMat ImageRenderer1::renderImage() const
 
 	// normalize each pixel by ray count
 	normalizeByRayCount(image, rayCountAccumulator);
+	normalize(image);
+
 	/*
 	// cut image to spartial resolution
 	oclMat srcROI	= oclMat(image, cutRect);
@@ -107,5 +112,6 @@ oclMat ImageRenderer1::renderImage() const
 
 	return cutImage;
 	*/
+
 	return image;
 }

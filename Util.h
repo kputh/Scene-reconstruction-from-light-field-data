@@ -24,3 +24,4 @@ void appendRayCountingChannel(oclMat& image);
 void normalizeByRayCount(oclMat& image);
 oclMat extractRayCountMat(const oclMat& image);
 void normalizeByRayCount(oclMat& image, const oclMat& rayCountMat);
+void normalize(oclMat& mat);

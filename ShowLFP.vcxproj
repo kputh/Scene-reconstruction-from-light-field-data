@@ -102,7 +102,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>ws2_32.lib;opencv_ocl249d.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;opencv_ocl249d.lib;opencv_viz249d.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -139,10 +139,12 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>ws2_32.lib;opencv_ocl249.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>ws2_32.lib;opencv_ocl249.lib;opencv_viz249.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CameraPoseEstimator.cpp" />
+    <ClCompile Include="CameraPoseEstimator1.cpp" />
     <ClCompile Include="CDCDepthEstimator.cpp" />
     <ClCompile Include="DepthEstimator.cpp" />
     <ClCompile Include="DepthEstimator1.cpp" />
@@ -173,6 +175,8 @@
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CameraPoseEstimator.h" />
+    <ClInclude Include="CameraPoseEstimator1.h" />
     <ClInclude Include="CDCDepthEstimator.h" />
     <ClInclude Include="DepthEstimator.h" />
     <ClInclude Include="DepthEstimator1.h" />

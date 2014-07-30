@@ -114,6 +114,12 @@
     <ClCompile Include="DepthToPointTranslator1.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
+    <ClCompile Include="CameraPoseEstimator.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
+    <ClCompile Include="CameraPoseEstimator1.cpp">
+      <Filter>Quelldateien</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Util.h">
@@ -201,6 +207,12 @@
       <Filter>Headerdateien</Filter>
     </ClInclude>
     <ClInclude Include="DepthToPointTranslator1.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="CameraPoseEstimator.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+    <ClInclude Include="CameraPoseEstimator1.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>
