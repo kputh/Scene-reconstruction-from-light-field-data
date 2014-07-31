@@ -35,6 +35,10 @@ class LightFieldPicture /*:
 	double rotationAngle;	// in radians
 	Vec2f fromLensCenterToOrigin;
 
+	Mat calibrationMatrix;
+
+	void generateCalibrationMatrix();
+
 public:
 	typedef float luminanceType;
 	static const int IMAGE_TYPE;

@@ -98,6 +98,8 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 	this->nextRow = Vec2f(cos(angleToNextRow), sin(angleToNextRow))
 		* lensPitchInPixels;
 
+	generateCalibrationMatrix();
+
 	// process raw image
 	Mat demosaicedImage;
 	//cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2RGB);
@@ -268,7 +270,7 @@ double LightFieldPicture::getRawFocalLength() const
 }
 
 
-Mat LightFieldPicture::getCalibrationMatrix() const
+void LightFieldPicture::generateCalibrationMatrix()
 {
 	// generate calibration matrix
 	//const double imageWidth = this->loader.bayerImage.size().width;
@@ -287,10 +289,14 @@ Mat LightFieldPicture::getCalibrationMatrix() const
 	const double cx = imageWidth / 2.;
 	const double cy = imageHeight / 2.;
 
-	Mat calibrationMatrix = (Mat_<double>(3, 3) <<
+	this->calibrationMatrix = (Mat_<double>(3, 3) <<
 		f,	0,	cx,
 		0,	af,	cy,
 		0,	0,	1);
+}
 
-	return calibrationMatrix;
+
+Mat LightFieldPicture::getCalibrationMatrix() const
+{
+	return this->calibrationMatrix;
 }
