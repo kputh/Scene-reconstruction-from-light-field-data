@@ -12,9 +12,12 @@
 class CameraPoseEstimator1 :
 	public CameraPoseEstimator
 {
+	static const double ZERO_THRESHOLD;
+	static const Mat TEST_POINTS;
+	static const Mat R90;
+
 	FeatureDetector* detector;
 	DescriptorExtractor* extractor;
-	//Feature2D* detectorAndExtractor;
 	DescriptorMatcher* matcher;
 
 public:
@@ -22,6 +25,6 @@ public:
 	~CameraPoseEstimator1(void);
 
 	void estimateCameraPoses(const vector<Mat>& images,
-		const Mat& calibrationMatrix) const;
+		const Mat& calibrationMatrix);
 };
 

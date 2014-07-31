@@ -17,8 +17,9 @@ using namespace cv;
  */
 class CameraPoseEstimator
 {
+protected:
 	typedef Mat rotationType;
-	typedef Vec4f translationType;
+	typedef Mat translationType;
 
 public:
 	vector<rotationType> rotations;
@@ -28,6 +29,6 @@ public:
 	~CameraPoseEstimator(void);
 
 	virtual void estimateCameraPoses(const vector<Mat>& images,
-		const Mat& calibrationMatrix) const =0;
+		const Mat& calibrationMatrix) =0;
 };
 
