@@ -5,6 +5,7 @@
 
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2\viz\vizcore.hpp>
 
 #include "Util.h"
 #include "ImageRenderer3.h"
@@ -187,4 +188,48 @@ void normalize(oclMat& mat)
 	}
 
 	ocl::multiply(1. / totalMaxVal, mat, mat);
+}
+
+void visualizeCameraTrajectory(const CameraPoseEstimator& estimator,
+	const Matx33d& calibrationMatrix)
+{
+	/// Create a window
+	viz::Viz3d myWindow("Coordinate Frame");
+
+	/// Add coordinate axes
+	myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
+
+	vector<Affine3<double>> cameraPath = vector<Affine3<double>>();
+	Mat translation, rotation;
+	double x, y, z;
+	Vec3d position, vDirection;
+	const Vec3d up = Vec3d(0, 1, 0);
+	Mat mDirection, unity3 = (Mat_<double>(3, 1) << 0, 0, 1);
+	for (int i = 0; i < estimator.rotations.size(); i++)
+	{
+		translation = estimator.translations.at(i);
+		x = translation.at<double>(0, 0);
+		y = translation.at<double>(1, 0);
+		z = translation.at<double>(2, 0);
+		position = Vec3d(x,y,z);
+
+		mDirection = estimator.rotations.at(i) * unity3;
+		x = mDirection.at<double>(0,0);
+		y = mDirection.at<double>(1,0);
+		z = mDirection.at<double>(2,0);
+		vDirection = Vec3d(x, y, z);
+
+		cameraPath.push_back(
+			viz::makeCameraPose(position, vDirection, up));
+	}
+	/*
+	viz::WTrajectory trajectory = viz::WTrajectory(cameraPath,
+		viz::WTrajectory::BOTH);
+		*/
+	//viz::WTrajectorySpheres trajectory = viz::WTrajectorySpheres(cameraPath);
+	viz::WTrajectoryFrustums trajectory = viz::WTrajectoryFrustums(cameraPath,
+		calibrationMatrix);
+
+	myWindow.showWidget("Camera trajectory", trajectory);
+	myWindow.spin();
 }
