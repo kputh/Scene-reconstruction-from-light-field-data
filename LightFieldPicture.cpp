@@ -10,7 +10,7 @@
 #include "LightFieldPicture.h"
 
 
-const int LightFieldPicture::IMAGE_TYPE = CV_32FC3;
+const int LightFieldPicture::IMAGE_TYPE = CV_32FC1;
 const LightFieldPicture::luminanceType LightFieldPicture::ZERO_LUMINANCE = 0;
 
 const Point LightFieldPicture::IMAGE_ORIGIN = Point(0, 0);
@@ -100,8 +100,8 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 
 	// process raw image
 	Mat demosaicedImage;
-	cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2RGB);
-	//cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2GRAY);
+	//cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2RGB);
+	cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2GRAY);
 	demosaicedImage.convertTo(demosaicedImage, IMAGE_TYPE, 1.0 / 65535.0);
 
 	demosaicedImage.copyTo(this->rawImage);
@@ -270,25 +270,27 @@ double LightFieldPicture::getRawFocalLength() const
 
 Mat LightFieldPicture::getCalibrationMatrix() const
 {
-	const float imageWidth = this->loader.bayerImage.size().width;
-	const float imageHeight = this->loader.bayerImage.size().height;
-	const float aspectRatio = imageHeight / imageWidth;
+	// generate calibration matrix
+	//const double imageWidth = this->loader.bayerImage.size().width;
+	//const double imageHeight = this->loader.bayerImage.size().height;
+	const double imageWidth = this->SPARTIAL_RESOLUTION.width;
+	const double imageHeight = this->SPARTIAL_RESOLUTION.height;
+	const double aspectRatio = imageHeight / imageWidth;
 
 	// focal length in pixels
-	const float f = this->loader.focalLength /
+	const double f = this->loader.focalLength /
 		this->loader.pixelPitch;
 
-	const float af = aspectRatio * f;
+	const double af = aspectRatio * f;
 
 	// optical center in pixels
-	const float cx = imageWidth / 2.;
-	const float cy = imageHeight / 2.;
+	const double cx = imageWidth / 2.;
+	const double cy = imageHeight / 2.;
 
-	float K[3][3] = {
-		{f,	0,	cx},
-		{0,	af,	cy},
-		{0,	0,	1}};
-	Mat calibrationMatrix = Mat(3, 3, CV_32FC1, K);
+	Mat calibrationMatrix = (Mat_<double>(3, 3) <<
+		f,	0,	cx,
+		0,	af,	cy,
+		0,	0,	1);
 
 	return calibrationMatrix;
 }
