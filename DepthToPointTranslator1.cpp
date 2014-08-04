@@ -14,39 +14,28 @@ DepthToPointTranslator1::~DepthToPointTranslator1(void)
 }
 
 
-oclMat DepthToPointTranslator1::translateDepthToPoints(const oclMat& depth,
-	const LightFieldPicture& lightfield) const
+Mat DepthToPointTranslator1::translateDepthToPoints(const Mat& depthMap,
+	const Mat& calibrationMatrix, const Mat& rotation, const Mat& translation)
+	const
 {
-	Mat depthMap, cameraMatrix, roi, points;
-	depth.download(depthMap);
+	Mat K44, Rt44, cameraMatrix, roi, points;
+	const Mat identityMatrix = Mat::eye(4, 4, CV_64FC1);
+	const Mat zeroRow = identityMatrix.row(3);		// TODO constants
+	const Mat zeroColumn = Mat::zeros(3, 1, CV_64FC1);
 
-	// 1) generate camera matrix
-	// rotation and translation are 0 => the camera matrix P is reduced to the
-	// calibration matrix K
-	cameraMatrix = Mat(4, 4, CV_32FC1, Scalar(0));
-	roi = cameraMatrix(Rect(0, 0, 3, 3));
-	lightfield.getCalibrationMatrix().copyTo(roi);
+	// 1) generate 4x4 camera matrix
+	// combine rotation and translation into a single 4x4 matrix
+	hconcat(rotation, translation, Rt44);
+	vconcat(Rt44, zeroRow, Rt44);
 
-	/*
-	const float width = depth.size().width;
-	const float height = depth.size().height;
-	const float cx = 0;		// (cx, cy) is the optical center
-	const float cy = 0;
+	// expand the calibration matrix into a 4x4 matrix
+	hconcat(calibrationMatrix, zeroColumn, K44);
+	vconcat(K44, zeroRow, K44);
 
-	const float f = lightfield.loader.focalLength / lightfield.loader.pixelPitch;
-	const float aspectRatio = height / width;
-	const float fx = f;
-	const float fy = aspectRatio * f;
+	// P = K[R|t]
+	cameraMatrix = K44 * Rt44;	
 
-	float K[4][4] = {
-		{ fx,	0,	cx,	0 },
-		{ 0,	fy,	cy,	0 },
-		{ 0,	0,	1,	0 },
-		{ 0,	0,	0,	1 }};
-	cameraMatrix = Mat(4, 4, CV_32FC1, K);
-	*/
-
-	// 2) reproject image points with depth to 3d space
+	// 2) reproject image points with depth to 3D space
 	reprojectImageTo3D(depthMap, points, cameraMatrix.inv());
 
 	// 3) scale to proper size
@@ -56,5 +45,5 @@ oclMat DepthToPointTranslator1::translateDepthToPoints(const oclMat& depth,
 	const Scalar scale = Scalar(sx, sy, sz);
 	points = points.mul(scale);
 
-	return oclMat(points);
+	return points;
 }

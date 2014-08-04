@@ -17,7 +17,7 @@ public:
 	DepthToPointTranslator1(void);
 	~DepthToPointTranslator1(void);
 
-	oclMat translateDepthToPoints(const oclMat& depth,
-		const LightFieldPicture& lightfield) const;
+	Mat translateDepthToPoints(const Mat& depth, const Mat& calibrationMatrix,
+		const Mat& rotation, const Mat& translation) const;
 };
 
