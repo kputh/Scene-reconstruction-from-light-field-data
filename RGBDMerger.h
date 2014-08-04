@@ -17,9 +17,13 @@ using namespace cv;
 class RGBDMerger
 {
 public:
+	Mat pointCloud;
+	Mat pointColors;
+
 	RGBDMerger(void);
 	~RGBDMerger(void);
 
-	virtual Mat merge(vector<Mat> maps) =0;
+	virtual Mat merge(const vector<Mat>& images, const vector<Mat>& maps,
+		const Mat& calibrationMatrix) =0;
 };
 
