@@ -233,3 +233,42 @@ void visualizeCameraTrajectory(const CameraPoseEstimator& estimator,
 	myWindow.showWidget("Camera trajectory", trajectory);
 	myWindow.spin();
 }
+
+void visualizePointCloud(const Mat& pointCloud, const Mat& image)
+{
+	/// Create a window
+	viz::Viz3d myWindow("Coordinate Frame");
+
+	/// Add coordinate axes
+	//myWindow.showWidget("Coordinate Widget", viz::WCoordinateSystem());
+
+	Mat colors;
+	image.convertTo(colors, CV_8U, 255);
+	viz::WCloud cloudWidget = viz::WCloud(pointCloud, colors);
+
+	const int width		= pointCloud.size().width;
+	const int height	= pointCloud.size().height;
+	vector<int> polygons = vector<int>();
+	for (int y = 0; y < height - 1; y++)
+	for (int x = 0; x < width - 1; x++)
+	{
+		polygons.push_back(3);
+		polygons.push_back(y * width + x);
+		polygons.push_back(y * width + (x + 1));
+		polygons.push_back((y + 1) * width + x);
+
+		polygons.push_back(3);
+		polygons.push_back((y + 1) * width + (x + 1));
+		polygons.push_back((y + 1) * width + x);
+		polygons.push_back(y * width + (x + 1));
+	}
+
+	//Mat p = Mat(polygons, false);
+	viz::WMesh meshWidget = viz::WMesh(pointCloud.reshape(0, 1), polygons,
+		colors.reshape(0, 1));
+
+	myWindow.showWidget("Point cloud", cloudWidget);
+	//myWindow.showWidget("Mesh", meshWidget);
+	
+	myWindow.spin();
+}

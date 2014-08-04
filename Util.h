@@ -30,3 +30,4 @@ void saveImageArc(LightFieldPicture lightfield, string sourceFileName,
 	int imageCount);
 void visualizeCameraTrajectory(const CameraPoseEstimator& estimator,
 	const Matx33d& calibrationMatrix);
+void visualizePointCloud(const Mat& pointCloud, const Mat& colors);
