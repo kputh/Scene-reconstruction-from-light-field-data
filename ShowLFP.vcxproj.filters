@@ -108,17 +108,17 @@
     <ClCompile Include="NormalDistribution.cpp">
       <Filter>Image Rendering</Filter>
     </ClCompile>
-    <ClCompile Include="DepthToPointTranslator.cpp">
-      <Filter>Quelldateien</Filter>
+    <ClCompile Include="CameraPoseEstimator.cpp">
+      <Filter>Depth Map Fusion</Filter>
     </ClCompile>
     <ClCompile Include="DepthToPointTranslator1.cpp">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="CameraPoseEstimator.cpp">
-      <Filter>Quelldateien</Filter>
+      <Filter>Depth Map Fusion</Filter>
     </ClCompile>
     <ClCompile Include="CameraPoseEstimator1.cpp">
-      <Filter>Quelldateien</Filter>
+      <Filter>Depth Map Fusion</Filter>
+    </ClCompile>
+    <ClCompile Include="DepthToPointTranslator.cpp">
+      <Filter>Depth Map Fusion</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -203,17 +203,17 @@
     <ClInclude Include="NormalDistribution.h">
       <Filter>Image Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="DepthToPointTranslator.h">
-      <Filter>Headerdateien</Filter>
+    <ClInclude Include="CameraPoseEstimator.h">
+      <Filter>Depth Map Fusion</Filter>
     </ClInclude>
     <ClInclude Include="DepthToPointTranslator1.h">
-      <Filter>Headerdateien</Filter>
-    </ClInclude>
-    <ClInclude Include="CameraPoseEstimator.h">
-      <Filter>Headerdateien</Filter>
+      <Filter>Depth Map Fusion</Filter>
     </ClInclude>
     <ClInclude Include="CameraPoseEstimator1.h">
-      <Filter>Headerdateien</Filter>
+      <Filter>Depth Map Fusion</Filter>
+    </ClInclude>
+    <ClInclude Include="DepthToPointTranslator.h">
+      <Filter>Depth Map Fusion</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

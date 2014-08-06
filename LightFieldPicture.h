@@ -40,10 +40,8 @@ class LightFieldPicture /*:
 	void generateCalibrationMatrix();
 
 public:
-	typedef float luminanceType;
+	typedef Vec3f luminanceType;
 	static const int IMAGE_TYPE;
-
-	static const luminanceType ZERO_LUMINANCE;
 
 	Size SPARTIAL_RESOLUTION;	// should be lower-case
 	Size ANGULAR_RESOLUTION;
@@ -69,4 +67,3 @@ public:
 
 	Mat getCalibrationMatrix() const;
 };
-

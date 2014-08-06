@@ -10,9 +10,7 @@
 #include "LightFieldPicture.h"
 
 
-const int LightFieldPicture::IMAGE_TYPE = CV_32FC1;
-const LightFieldPicture::luminanceType LightFieldPicture::ZERO_LUMINANCE = 0;
-
+const int LightFieldPicture::IMAGE_TYPE = CV_32FC3;
 const Point LightFieldPicture::IMAGE_ORIGIN = Point(0, 0);
 
 
@@ -50,8 +48,8 @@ void LightFieldPicture::extractSubapertureImageAtlas()
 		}
 	}
 
-	ocl::remap(oclMat(this->rawImage), this->subapertureImageAtlas, oclMat(map), oclMat(),
-		CV_INTER_LINEAR, BORDER_CONSTANT, this->ZERO_LUMINANCE);
+	ocl::remap(oclMat(this->rawImage), this->subapertureImageAtlas, oclMat(map),
+		oclMat(), CV_INTER_LINEAR, BORDER_CONSTANT, Scalar::all(0));
 }
 
 
@@ -102,8 +100,8 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 
 	// process raw image
 	Mat demosaicedImage;
-	//cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2RGB);
-	cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2GRAY);
+	cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2RGB);
+	//cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2GRAY);
 	demosaicedImage.convertTo(demosaicedImage, IMAGE_TYPE, 1.0 / 65535.0);
 
 	demosaicedImage.copyTo(this->rawImage);
@@ -146,7 +144,7 @@ LightFieldPicture::luminanceType LightFieldPicture::getLuminanceI(
 {
 	// luminance outside of the recorded spartial range is zero
 	if (!validSpartialCoordinates.contains(Point(x, y)))
-		return ZERO_LUMINANCE;
+		return luminanceType::all(0);
 
 	// luminance outside the recorded angular range is clamped to the closest valid ray
 	Vec2f uv = Vec2d(u, v);
@@ -172,7 +170,7 @@ LightFieldPicture::luminanceType LightFieldPicture::getLuminanceF(
 	const float halfHeight = SPARTIAL_RESOLUTION.height / 2.0;
 	// luminance outside the recorded spartial range is zero
 	if (abs(x) > halfWidth || abs(y) > halfHeight)
-		return ZERO_LUMINANCE;
+		return luminanceType::all(0);
 
 	// luminance outside the recorded angular range is clamped to the closest valid ray
 	Vec2f angularVector = Vec2f(u, v);

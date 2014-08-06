@@ -17,9 +17,6 @@ class CDCDepthEstimator :
 	public DepthEstimator
 {
 	// parameters of the algorithm
-	static const float ALPHA_MIN;
-	static const float ALPHA_MAX;
-	static const int DEPTH_RESOLUTION;
 	static const Size DEFOCUS_WINDOW_SIZE;
 	static const Size CORRESPONDENCE_WINDOW_SIZE;
 	static const float LAMBDA_SOURCE[];
@@ -70,6 +67,10 @@ class CDCDepthEstimator :
 	static MRF::CostVal fnCost(int pix1, int pix2, MRF::Label i, MRF::Label j);
 
 public:
+	static const int DEPTH_RESOLUTION;
+	static const float ALPHA_MIN;
+	static const float ALPHA_MAX;
+
 	CDCDepthEstimator(void);
 	~CDCDepthEstimator(void);
 

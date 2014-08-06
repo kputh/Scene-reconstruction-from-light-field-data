@@ -13,7 +13,7 @@
 
 const float CDCDepthEstimator::ALPHA_MIN					= 0.2;
 const float CDCDepthEstimator::ALPHA_MAX					= 2.0;
-const int CDCDepthEstimator::DEPTH_RESOLUTION				= 25;
+const int CDCDepthEstimator::DEPTH_RESOLUTION				= 255;
 const Size CDCDepthEstimator::DEFOCUS_WINDOW_SIZE			= Size(9, 9);
 const Size CDCDepthEstimator::CORRESPONDENCE_WINDOW_SIZE	= Size(9, 9);
 const float CDCDepthEstimator::LAMBDA_SOURCE[]				= { 1, 1 };
@@ -184,21 +184,29 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	cEDOF.copyTo(extendedDepthOfFieldImage, mask1);
 
 	// 4) compute actual depth from alpha values
-	oclMat depthMap;
-	ocl::multiply(lightfield.getRawFocalLength(), alphaMap, depthMap);
+	oclMat focalLengthMap, depthMap, tmp1, tmp2;
+	ocl::multiply(lightfield.getRawFocalLength(), alphaMap, focalLengthMap);
 
 	// lens equation:		1/f = 1/d_obj + 1/d_img
 	// derived equation:	d_obj = (f * d_img) / (d_img - f)
-	// d_img is unknown
+	// actual d_img is unknown
 	// TODO
-
+	const double d_img = 0.0281;	// (mm) - the distance between mla and exit pupil
+	Scalar di = Scalar(d_img);
+	
+	//depthMap = (focalLengthMap * d_img) / (d_img - focalLengthMap);
+	ocl::multiply(d_img, focalLengthMap, tmp1);
+	ocl::subtract(focalLengthMap, di, tmp2);
+	ocl::multiply(-1, tmp2, tmp2);
+	ocl::divide(tmp1, tmp2, depthMap);
+	depthMap= alphaMap;
 	// debugging
-	/*
+
+	
 	//renderer->setFocalLength(?);
 	oclMat image = renderer->renderImage();
-
 	Mat m;
-	
+	/*
 	defocusAlpha.download(m); normalize(m,m,0,1,NORM_MINMAX);
 	string window1 = "depth (alpha) from defocus";
 	namedWindow(window1, WINDOW_NORMAL);
@@ -214,13 +222,13 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	string window3 = "confidence from defocus";
 	namedWindow(window3, WINDOW_NORMAL);
 	imshow(window3, m);
-	
+
 	correspondenceConfidence.download(m);
 	//normalize(m, m, 0, 1, NORM_MINMAX);
 	string window4 = "confidence from correspondence";
 	namedWindow(window4, WINDOW_NORMAL);
 	imshow(window4, m);
-	
+	*/
 	image.download(m);
 	string window5 = "central perspective";
 	namedWindow(window5, WINDOW_NORMAL);
@@ -231,6 +239,30 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	namedWindow(window6, WINDOW_NORMAL);
 	imshow(window6, m);
 	/*
+	confidenceMap.download(m);
+	threshold(m, m, 1, 1, THRESH_BINARY);
+	string window5 = "tresholded 1 combined confidence";
+	namedWindow(window5, WINDOW_NORMAL);
+	imshow(window5, m);
+
+	confidenceMap.download(m);
+	threshold(m, m, 1.1, 1, THRESH_BINARY);
+	string window09 = "tresholded 1.1 combined confidence";
+	namedWindow(window09, WINDOW_NORMAL);
+	imshow(window09, m);
+
+	confidenceMap.download(m);
+	threshold(m, m, 1.01, 1, THRESH_BINARY);
+	string window10 = "tresholded 1.01 combined confidence";
+	namedWindow(window10, WINDOW_NORMAL);
+	imshow(window10, m);
+
+	confidenceMap.download(m);
+	threshold(m, m, 1.001, 1, THRESH_BINARY);
+	string window11 = "tresholded 1.001 combined confidence";
+	namedWindow(window11, WINDOW_NORMAL);
+	imshow(window11, m);
+	*/
 	confidenceMap.download(m); normalize(m,m,0,1,NORM_MINMAX);
 	string window7 = "combined confidence map";
 	namedWindow(window7, WINDOW_NORMAL);
@@ -247,9 +279,8 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	imshow(window9, m);
 	
 	waitKey(0);
-	*/
 	
-
+	
 	// crop all resulting Mats
 	const int width = lightfield.SPARTIAL_RESOLUTION.width;
 	const int height = lightfield.SPARTIAL_RESOLUTION.height;
@@ -277,6 +308,28 @@ oclMat CDCDepthEstimator::calculateDefocusResponse(
 	const LightFieldPicture& lightfield, const oclMat& refocusedImage,
 	const float alpha)
 {
+	vector<oclMat> channels;
+	ocl::split(refocusedImage, channels);
+
+	oclMat channelResponse;
+	oclMat totalResponse = oclMat(refocusedImage.size(), CV_32FC1, Scalar::all(0));
+	for (int i = 0; i < channels.size(); i++)
+	{
+		ocl::Laplacian(channels.at(i), channelResponse, CV_32F);
+		ocl::abs(channelResponse, channelResponse);
+		ocl::filter2D(channelResponse, channelResponse, DDEPTH, DEFOCUS_WINDOW,
+			WINDOW_CENTER, 0, BORDER_TYPE);
+
+		// merge color channels
+		ocl::multiply(channelResponse, channelResponse, channelResponse);
+		ocl::add(channelResponse, totalResponse, totalResponse);
+	}
+	ocl::multiply(1. /(float) channels.size(), totalResponse, totalResponse);
+	ocl::pow(totalResponse, 0.5, totalResponse);
+
+	return totalResponse;
+
+	/*
 	oclMat response, d2x, d2y;
 
 	//ocl::Laplacian(refocusedImage, response, CV_32F, LAPLACIAN_KERNEL_SIZE); // Größe wird nicht unterstützt
@@ -298,11 +351,12 @@ oclMat CDCDepthEstimator::calculateDefocusResponse(
 	ocl::filter2D(refocusedImage, response, DDEPTH, LoG,
 		WINDOW_CENTER, 0, BORDER_TYPE);
 	*/
-
+	/*
 	ocl::abs(response, response);
 	ocl::filter2D(response, response, DDEPTH, DEFOCUS_WINDOW,
 		WINDOW_CENTER, 0, BORDER_TYPE);
 	return response;
+	*/
 }
 
 
@@ -314,7 +368,7 @@ oclMat CDCDepthEstimator::calculateCorrespondenceResponse(
 
 	oclMat subapertureImage, modifiedSubapertureImage, differenceImage,
 		squaredDifference;
-	oclMat variance = oclMat(imageSize, CV_32FC1, Scalar(0));
+	oclMat variance = oclMat(imageSize, CV_32FC3, Scalar::all(0));
 	Vec2f translation;
 	Point2f dstTri[3];
 	Mat transformation;
@@ -349,11 +403,21 @@ oclMat CDCDepthEstimator::calculateCorrespondenceResponse(
 	ocl::pow(variance, 0.5, standardDeviation);	// es gibt kein ocl::sqrt()
 	ocl::filter2D(standardDeviation, confidence, DDEPTH, CORRESPONDENCE_WINDOW,
 		WINDOW_CENTER, 0, BORDER_TYPE);
-	/*
-	ocl::filter2D(variance, confidence, DDEPTH, CORRESPONDENCE_WINDOW,
-		WINDOW_CENTER, 0, BORDER_TYPE);
-	*/
-	return confidence;
+
+	// merge color channels
+	vector<oclMat> channels;
+	ocl::split(confidence, channels);
+	oclMat totalConfidence = oclMat(refocusedImage.size(), CV_32FC1, Scalar::all(0));
+	for (int i = 0; i < channels.size(); i++)
+	{
+		ocl::multiply(channels.at(i), channels.at(i), channels.at(i));
+		ocl::add(channels.at(i), totalConfidence, totalConfidence);
+	}
+	ocl::multiply(1. / (float) channels.size(), totalConfidence, totalConfidence);
+	ocl::pow(totalConfidence, 0.5, totalConfidence);
+
+	return totalConfidence;
+	//return confidence;
 }
 
 
@@ -408,18 +472,18 @@ MRF::CostVal CDCDepthEstimator::fnCost(int pix1, int pix2,
 {
 	return 0;
 
-	/*
+
 	if (pix1 > pix2)
 	{
 		int tmp = pix1; pix1 = pix2; pix2 = tmp;
 		tmp = i; i = j; j = tmp;
 	}
-	*/
+
 	/*
 	if (pix1 == pix2)
 		return 0;
 	*/
-
+	
 	switch (j)
 	{
 	case 0:
@@ -429,6 +493,28 @@ MRF::CostVal CDCDepthEstimator::fnCost(int pix1, int pix2,
 	default:
 		return 0;
 	}
+	
+	const int width = -1;
+	float *depthMap1, *depthMap2, *drvt1, *drvt2;
+
+	const int x1 = pix1 / width;	const int y1 = pix1 % width;
+	const int x2 = pix2 / width;	const int y2 = pix2 % width;
+	const float diffX = x1 - (float) x2;
+	const float diffY = y1 - (float) y2;
+	const bool xIsEqual = (x1 == x2);
+	const bool yIsEqual = (y1 == y2);
+
+	const float d1depth = depthMap1[pix1] - depthMap2[pix2];
+	const float d1x = xIsEqual ? 0 : abs(d1depth / diffX);
+	const float d1y = yIsEqual ? 0 : abs(d1depth / diffY);
+	const float flatnessCost = LAMBDA_FLAT * (d1x + d1y);
+
+	const float d2depth = drvt1[pix1] - drvt2[pix2];
+	const float d2x = xIsEqual ? 0 : abs(d2depth / diffX);
+	const float d2y = yIsEqual ? 0 : abs(d2depth / diffY);
+	const float smoothnessCost = LAMBDA_SMOOTH * (d2x + d2y);
+
+	return flatnessCost + smoothnessCost;
 }
 
 
@@ -483,7 +569,7 @@ oclMat CDCDepthEstimator::mrf(const oclMat& depth1, const oclMat& depth2,
 	tmpMat.reshape(1, 1).copyTo(CDCDepthEstimator::fsCost1);
 
 	// debugging
-	double maxVal, minVal;
+	//double maxVal, minVal;
 	oclMat maxMat, defocusDataCost, defocusFlatnessCost, defocusSmoothnessCost,
 		defocusTotalCost;
 	ocl::max(flatnessCost, smoothnessCost, maxMat);

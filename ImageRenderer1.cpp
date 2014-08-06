@@ -50,7 +50,7 @@ oclMat ImageRenderer1::renderImage() const
 	if (alpha == 1)
 	{
 		oclMat image = oclMat(lightfield.SPARTIAL_RESOLUTION,
-			lightfield.IMAGE_TYPE, lightfield.ZERO_LUMINANCE);
+			lightfield.IMAGE_TYPE, Scalar::all(0));
 
 		oclMat subapertureImage;
 		int u, v;
@@ -66,16 +66,14 @@ oclMat ImageRenderer1::renderImage() const
 		return image;
 	}
 
-	oclMat image = oclMat(imageSize, lightfield.IMAGE_TYPE,
-		lightfield.ZERO_LUMINANCE);
-	oclMat rayCountAccumulator = oclMat(imageSize, CV_32FC1, Scalar(0));
+	oclMat image = oclMat(imageSize, lightfield.IMAGE_TYPE, Scalar::all(0));
+	oclMat rayCountAccumulator = oclMat(imageSize, CV_32FC1, Scalar::all(0));
 	oclMat subapertureImage, modifiedSubapertureImage, rayCountMat;
 	Vec2f translation;
 	Point2f dstTri[3];
 	Mat transformation;
 
 	int u, v;
-	double minVal, maxVal;
 	for(u = 0; u < this->lightfield.ANGULAR_RESOLUTION.width; u++)
 	{
 		for(v = 0; v < this->lightfield.ANGULAR_RESOLUTION.height; v++)
@@ -95,7 +93,7 @@ oclMat ImageRenderer1::renderImage() const
 				transformation, imageSize, INTER_LINEAR);
 
 			rayCountMat = extractRayCountMat(modifiedSubapertureImage);
-
+			
 			ocl::add(modifiedSubapertureImage, image, image);
 			ocl::add(rayCountMat, rayCountAccumulator, rayCountAccumulator);
 		}
@@ -112,6 +110,5 @@ oclMat ImageRenderer1::renderImage() const
 
 	return cutImage;
 	*/
-
 	return image;
 }

@@ -163,15 +163,13 @@ oclMat extractRayCountMat(const oclMat& image)
 
 void normalizeByRayCount(oclMat& image, const oclMat& rayCountMat)
 {
-	vector<oclMat> channels;
-	ocl::split(image, channels);
-
+	oclMat rayCountMatMultiChannel;
+	vector<oclMat> channels = vector<oclMat>(image.channels());
 	for (int i = 0; i < channels.size(); i++)
-	{
-		ocl::divide(channels[i], rayCountMat, channels[i]);
-	}
-	
-	ocl::merge(channels, image);
+		channels[i] = rayCountMat;
+	ocl::merge(channels, rayCountMatMultiChannel);
+
+	ocl::divide(image, rayCountMatMultiChannel, image);
 }
 
 
