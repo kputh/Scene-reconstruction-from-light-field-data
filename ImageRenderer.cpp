@@ -17,7 +17,7 @@ LightFieldPicture ImageRenderer::getLightfield() const
 }
 
 
-void ImageRenderer::setLightfield(LightFieldPicture lightfield)
+void ImageRenderer::setLightfield(const LightFieldPicture& lightfield)
 {
 	this->lightfield = lightfield;
 }

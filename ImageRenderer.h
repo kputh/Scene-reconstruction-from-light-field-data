@@ -25,7 +25,7 @@ public:
 	~ImageRenderer(void);
 
 	LightFieldPicture getLightfield() const;
-	virtual void setLightfield(LightFieldPicture lightfield);
+	virtual void setLightfield(const LightFieldPicture& lightfield);
 	float getAlpha() const;
 	virtual void setAlpha(float alpha);
 	Vec2i getPinholePosition() const;
