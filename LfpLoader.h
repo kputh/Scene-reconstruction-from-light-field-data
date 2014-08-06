@@ -34,6 +34,9 @@ public:
 	Vec2d scaleFactor;
 	Vec3d sensorOffset;
 	string cameraSerialNumber;
+	int black, white;
+	double gamma;
+	Mat whiteBalancingMatrix, colorCorrectionMatrix;
 
 	LfpLoader(void);
 	LfpLoader(const string& pathToFile);

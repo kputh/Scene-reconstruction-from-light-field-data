@@ -63,7 +63,7 @@ void LightFieldPicture::extractSubapertureImageAtlas()
 			if (t % 2 == 0)
 				map.at<coord>(y, x) = Vec2f(x, y);
 			else
-				map.at<coord>(y, x) = Vec2f(x - sgn * 0.5, y);
+				map.at<coord>(y, x) = Vec2f(x + 0.5, y);
 		}
 	}
 	ocl::remap(this->subapertureImageAtlas, this->subapertureImageAtlas, oclMat(map),
@@ -117,10 +117,24 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 	generateCalibrationMatrix();
 
 	// process raw image
+	// 1) demosaicing
 	Mat demosaicedImage;
+	const int white = loader.white * 16;	// TODO read from file
+	const int black = loader.black * 16;
 	cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2RGB);
-	//cvtColor(loader.bayerImage, demosaicedImage, CV_BayerBG2GRAY);
-	demosaicedImage.convertTo(demosaicedImage, IMAGE_TYPE, 1.0 / 65535.0);
+	demosaicedImage.convertTo(demosaicedImage, IMAGE_TYPE);
+	demosaicedImage = (demosaicedImage - black) / (float) (white - black);
+
+	// 2) white balancing
+	transform(demosaicedImage, demosaicedImage, loader.whiteBalancingMatrix);
+
+	// 3) color correction
+	Mat colorCorrectionMatrix = loader.colorCorrectionMatrix;
+	colorCorrectionMatrix.convertTo(colorCorrectionMatrix, CV_32FC1);
+	transform(demosaicedImage, demosaicedImage, colorCorrectionMatrix);
+
+	// 4) gamma correction
+	pow(demosaicedImage, loader.gamma, demosaicedImage);
 
 	demosaicedImage.copyTo(this->rawImage);
 

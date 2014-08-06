@@ -1,6 +1,6 @@
 #include "LfpLoader.h"
 #include "lfpsplitter.c"
-#include <iostream>
+#include <iostream>	// used for debugging
 #include <opencv2/imgproc/imgproc.hpp>
 
 
@@ -110,6 +110,12 @@ void LfpLoader::readMetadata(const rapidjson::Document& doc)
 	const rapidjson::Value& mla = devices["mla"];
 	const rapidjson::Value& scaleFactor = mla["scaleFactor"];
 	const rapidjson::Value& sensorOffset = mla["sensorOffset"];
+	const rapidjson::Value& image = doc["image"];
+	const rapidjson::Value& rawDetails = image["rawDetails"];
+	const rapidjson::Value& pixelFormat = rawDetails["pixelFormat"];
+	const rapidjson::Value& color = image["color"];
+	const rapidjson::Value& whiteBalanceGain = color["whiteBalanceGain"];
+	const rapidjson::Value& ccmRgbToSrgbArray = color["ccmRgbToSrgbArray"];
 
 	this->pixelPitch	= devices["sensor"]["pixelPitch"].GetDouble();
 	this->focalLength	= devices["lens"]["focalLength"].GetDouble();
@@ -120,4 +126,20 @@ void LfpLoader::readMetadata(const rapidjson::Document& doc)
 	this->sensorOffset	= Vec3d(sensorOffset["x"].GetDouble(),
 		sensorOffset["y"].GetDouble(),
 		sensorOffset["z"].GetDouble());
+	this->black = pixelFormat["black"]["r"].GetInt();
+	this->white = pixelFormat["white"]["r"].GetInt();
+	this->gamma = color["gamma"].GetDouble();
+
+	double r = whiteBalanceGain["r"].GetDouble();
+	double g = whiteBalanceGain["gr"].GetDouble();
+	double b = whiteBalanceGain["b"].GetDouble();
+	this->whiteBalancingMatrix = (Mat_<double>(3,3) <<
+		b, 0, 0,
+		0, g, 0,
+		0, 0, r);
+
+	double tmpVec[9];
+	for (int i = 0; i < 9; i++)
+		tmpVec[i] = ccmRgbToSrgbArray[i].GetDouble();
+	this->colorCorrectionMatrix = Mat(3, 3,CV_64FC1, tmpVec).clone();
 }
