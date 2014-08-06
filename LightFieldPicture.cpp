@@ -50,6 +50,24 @@ void LightFieldPicture::extractSubapertureImageAtlas()
 
 	ocl::remap(oclMat(this->rawImage), this->subapertureImageAtlas, oclMat(map),
 		oclMat(), CV_INTER_LINEAR, BORDER_CONSTANT, Scalar::all(0));
+
+	// correct line shift due to hexagonal microlens array structure
+	int t2, sgn;
+	for (y = 0; y < dstHeight; y++)
+	{
+		for (x = 0; x < dstWidth; x++)
+		{
+			t = y % SPARTIAL_RESOLUTION.height - t0;
+			sgn = t / abs(t);
+
+			if (t % 2 == 0)
+				map.at<coord>(y, x) = Vec2f(x, y);
+			else
+				map.at<coord>(y, x) = Vec2f(x - sgn * 0.5, y);
+		}
+	}
+	ocl::remap(this->subapertureImageAtlas, this->subapertureImageAtlas, oclMat(map),
+		oclMat(), CV_INTER_LINEAR, BORDER_REPLICATE);
 }
 
 
