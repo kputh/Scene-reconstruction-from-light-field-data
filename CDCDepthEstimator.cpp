@@ -371,25 +371,20 @@ oclMat CDCDepthEstimator::calculateCorrespondenceResponse(
 	oclMat subapertureImage, modifiedSubapertureImage, differenceImage,
 		squaredDifference;
 	oclMat variance = oclMat(imageSize, CV_32FC3, Scalar::all(0));
-	Vec2f translation;
-	Point2f dstTri[3];
-	Mat transformation;
+	Mat transformation = Mat::eye(2, 3, CV_32FC1);
 
 	int u, v;
 	for (v = 0; v < lightfield.ANGULAR_RESOLUTION.height; v++)
+	{
+		transformation.at<float>(1, 2) = -(v - 5) * weight;
 		for (u = 0; u < lightfield.ANGULAR_RESOLUTION.width; u++)
 		{
+			transformation.at<float>(0, 2) = -(u - 5) * weight;
+
 			// get subaperture image
 			subapertureImage = lightfield.getSubapertureImageI(u, v);
 
 			// translate and crop subaperture image
-			translation = (Vec2f(u, v) - angularCorrection) * weight;
-			translation += fromCornerToCenter;
-			dstTri[0] = Point2f(0 + translation[0], 0 + translation[1]);
-			dstTri[1] = Point2f(1 + translation[0], 0 + translation[1]);
-			dstTri[2] = Point2f(0 + translation[0], 1 + translation[1]);
-			transformation = getAffineTransform(UNIT_VECTORS, dstTri);
-
 			ocl::warpAffine(subapertureImage, modifiedSubapertureImage,
 				transformation, imageSize, INTER_LINEAR);
 
@@ -398,6 +393,7 @@ oclMat CDCDepthEstimator::calculateCorrespondenceResponse(
 			ocl::multiply(differenceImage, differenceImage, squaredDifference);
 			ocl::add(squaredDifference, variance, variance);
 		}
+	}
 
 	ocl::multiply(NuvMultiplier, variance, variance);
 
