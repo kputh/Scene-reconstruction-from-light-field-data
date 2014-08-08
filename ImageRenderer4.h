@@ -12,7 +12,7 @@
  *
  * @author      Kai Puth <kai.puth@student.htw-berlin.de>
  * @version     0.1
- * @since       2014-06-20
+ * @since       2014-08-07
  */
 class ImageRenderer4 :
 	public ImageRenderer
