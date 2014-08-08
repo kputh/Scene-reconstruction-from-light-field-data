@@ -44,21 +44,20 @@ void LightFieldPicture::extractSubapertureImageAtlas()
 			u = x / SPARTIAL_RESOLUTION.width - u0;
 			s = x % SPARTIAL_RESOLUTION.width - s0;
 
+			// TODO use integer coordinates
 			map.at<coord>(y, x) = tmp + floor(s - t / 2.) * nextLens + Vec2f(u, v);
 		}
 	}
 
 	ocl::remap(oclMat(this->rawImage), this->subapertureImageAtlas, oclMat(map),
-		oclMat(), CV_INTER_LINEAR, BORDER_CONSTANT, Scalar::all(0));
+		oclMat(), INTER_NEAREST, BORDER_CONSTANT, Scalar::all(0));
 
 	// correct line shift due to hexagonal microlens array structure
-	int t2, sgn;
 	for (y = 0; y < dstHeight; y++)
 	{
 		for (x = 0; x < dstWidth; x++)
 		{
 			t = y % SPARTIAL_RESOLUTION.height - t0;
-			sgn = t / abs(t);
 
 			if (t % 2 == 0)
 				map.at<coord>(y, x) = Vec2f(x, y);
@@ -67,7 +66,7 @@ void LightFieldPicture::extractSubapertureImageAtlas()
 		}
 	}
 	ocl::remap(this->subapertureImageAtlas, this->subapertureImageAtlas, oclMat(map),
-		oclMat(), CV_INTER_LINEAR, BORDER_REPLICATE);
+		oclMat(), INTER_LINEAR, BORDER_REPLICATE);
 }
 
 
