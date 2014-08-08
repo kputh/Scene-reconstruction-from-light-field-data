@@ -44,12 +44,13 @@ void LightFieldPicture::extractSubapertureImageAtlas()
 			u = x / SPARTIAL_RESOLUTION.width - u0;
 			s = x % SPARTIAL_RESOLUTION.width - s0;
 
-			// TODO use integer coordinates
 			map.at<coord>(y, x) = tmp + floor(s - t / 2.) * nextLens + Vec2f(u, v);
 		}
 	}
+	Mat integralMap;
+	convertMaps(map, noArray(), integralMap, noArray(), CV_16SC2, true);
 
-	ocl::remap(oclMat(this->rawImage), this->subapertureImageAtlas, oclMat(map),
+	ocl::remap(oclMat(this->rawImage), this->subapertureImageAtlas, oclMat(integralMap),
 		oclMat(), INTER_NEAREST, BORDER_CONSTANT, Scalar::all(0));
 
 	// correct line shift due to hexagonal microlens array structure
@@ -114,6 +115,8 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 		* lensPitchInPixels;
 
 	generateCalibrationMatrix();
+
+	this->distanceFromImageToLens = loader.focalLength * loader.lambdaInfinity;
 
 	// process raw image
 	// 1) demosaicing
@@ -328,4 +331,16 @@ void LightFieldPicture::generateCalibrationMatrix()
 Mat LightFieldPicture::getCalibrationMatrix() const
 {
 	return this->calibrationMatrix;
+}
+
+
+double LightFieldPicture::getDistanceFromImageToLens() const
+{
+	return this->distanceFromImageToLens;
+}
+
+
+double LightFieldPicture::getLambdaInfinity() const
+{
+	return this->loader.lambdaInfinity;
 }

@@ -5,15 +5,14 @@
 #include <opencv2/highgui/highgui.hpp>	// debugging
 #include "mrf.h"
 #include "MaxProdBP.h"
-#include "BP-S.h"	// does it work better than BP-M?
-#include "ImageRenderer1.h"
+#include "ImageRenderer4.h"
 #include "CDCDepthEstimator.h"
 #include "Util.h"
 
 
 const float CDCDepthEstimator::ALPHA_MIN					= 0.2;
 const float CDCDepthEstimator::ALPHA_MAX					= 2.0;
-const int CDCDepthEstimator::DEPTH_RESOLUTION				= 255;
+const int CDCDepthEstimator::DEPTH_RESOLUTION				= 25;
 const Size CDCDepthEstimator::DEFOCUS_WINDOW_SIZE			= Size(9, 9);
 const Size CDCDepthEstimator::CORRESPONDENCE_WINDOW_SIZE	= Size(9, 9);
 const float CDCDepthEstimator::LAMBDA_SOURCE[]				= { 1, 1 };
@@ -57,22 +56,25 @@ vector<MRF::CostVal> CDCDepthEstimator::fsCost2;
 
 CDCDepthEstimator::CDCDepthEstimator(void)
 {
-	this->renderer	=  new ImageRenderer1;
+	this->renderer = new ImageRenderer4();
 }
 
 
 CDCDepthEstimator::~CDCDepthEstimator(void)
 {
+	delete this->renderer;
 }
 
 
 oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 {
+	const double alphaMax = lightfield.getLambdaInfinity() + 1.;
+
 	// 1) for each shear, compute depth response
 	// also compute "running" response extrema, depth map and extended depth of
 	// field image
 	this->renderer->setLightfield(lightfield);
-	this->imageSize	= this->renderer->imageSize;
+	this->imageSize	= lightfield.SPARTIAL_RESOLUTION;
 	this->angularCorrection = Vec2f(lightfield.ANGULAR_RESOLUTION.width, 
 		lightfield.ANGULAR_RESOLUTION.height) * 0.5;
 	this->NuvMultiplier	= 1. / (double) lightfield.ANGULAR_RESOLUTION.area();
@@ -84,7 +86,7 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	const int top			= (imageSize.height - srcHeight) / 2;
 	this->fromCornerToCenter	= Vec2f(left, top);
 
-	const float alphaStep = (ALPHA_MAX - ALPHA_MIN) / (float) DEPTH_RESOLUTION;
+	const float alphaStep = (alphaMax - ALPHA_MIN) / (float) DEPTH_RESOLUTION;
 	oclMat refocusedImage, response, maxDefocusResponse, max2, minCorrespondenceResponse, min2,
 		dEDOF, cEDOF, defocusAlpha, correspondenceAlpha, mask1, mask2;
 
@@ -108,7 +110,7 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	response.copyTo(minCorrespondenceResponse);
 	response.copyTo(min2);
 	
-	for (alpha = ALPHA_MIN + alphaStep; alpha <= ALPHA_MAX; alpha += alphaStep)
+	for (alpha = ALPHA_MIN + alphaStep; alpha <= alphaMax; alpha += alphaStep)
 	{
 		scalarAlpha = Scalar(alpha);
 		this->renderer->setAlpha(alpha);
@@ -159,7 +161,7 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	ocl::divide(min2, minCorrespondenceResponse, correspondenceConfidence); // laut Paper umgekehrt
 
 	// normalize confidence (from MatLab code)
-	//normalizeConfidence(defocusConfidence, correspondenceConfidence);
+	normalizeConfidence(defocusConfidence, correspondenceConfidence);
 
 	// 3) global operation to combine cues
 	oclMat labels = mrf(defocusAlpha, correspondenceAlpha,
@@ -189,24 +191,22 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 
 	// lens equation:		1/f = 1/d_obj + 1/d_img
 	// derived equation:	d_obj = (f * d_img) / (d_img - f)
-	// actual d_img is unknown
-	// TODO
-	const double d_img = 0.0281;	// (mm) - the distance between mla and exit pupil
-	Scalar di = Scalar(d_img);
+	const double d_img = lightfield.getDistanceFromImageToLens();	// (mm) - the distance between mla and exit pupil
+	const Scalar di = Scalar(d_img);
 	
 	//depthMap = (focalLengthMap * d_img) / (d_img - focalLengthMap);
 	ocl::multiply(d_img, focalLengthMap, tmp1);
 	ocl::subtract(focalLengthMap, di, tmp2);
 	ocl::multiply(-1, tmp2, tmp2);
 	ocl::divide(tmp1, tmp2, depthMap);
-	depthMap= alphaMap;
+	//depthMap = alphaMap;
 	// debugging
 
 	
 	//renderer->setFocalLength(?);
 	oclMat image = renderer->renderImage();
 	Mat m;
-	/*
+	
 	defocusAlpha.download(m); normalize(m,m,0,1,NORM_MINMAX);
 	string window1 = "depth (alpha) from defocus";
 	namedWindow(window1, WINDOW_NORMAL);
@@ -228,7 +228,7 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	string window4 = "confidence from correspondence";
 	namedWindow(window4, WINDOW_NORMAL);
 	imshow(window4, m);
-	*/
+	
 	image.download(m);
 	string window5 = "central perspective";
 	namedWindow(window5, WINDOW_NORMAL);
@@ -282,6 +282,7 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	
 	
 	// crop all resulting Mats
+	/*
 	const int width = lightfield.SPARTIAL_RESOLUTION.width;
 	const int height = lightfield.SPARTIAL_RESOLUTION.height;
 	const int cropLeft = (depthMap.size().width - width) / 2;
@@ -295,6 +296,7 @@ oclMat CDCDepthEstimator::estimateDepth(const LightFieldPicture& lightfield)
 	oclm.copyTo(confidenceMap);
 	oclm = oclMat(extendedDepthOfFieldImage, cropRect);
 	oclm.copyTo(extendedDepthOfFieldImage);
+	*/
 
 	this->depthMap					= depthMap;
 	this->confidenceMap				= confidenceMap;
@@ -701,8 +703,8 @@ oclMat CDCDepthEstimator::mrf(const oclMat& depth1, const oclMat& depth2,
 	energy = new EnergyFunction(data, smooth);
 
 	// compute optimized depth map (labeling)
-	//mrf = new MaxProdBP(depth1.size().width, depth1.size().height, 2, energy);
-	mrf = new BPS(depth1.size().width, depth1.size().height, 2, energy);
+	mrf = new MaxProdBP(depth1.size().width, depth1.size().height, 2, energy);
+	//mrf = new BPS(depth1.size().width, depth1.size().height, 2, energy);
 	mrf->initialize();
 	mrf->clearAnswer();
 	

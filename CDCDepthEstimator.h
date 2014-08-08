@@ -1,7 +1,7 @@
 #pragma once
 
 #include "mrf.h"
-#include "ImageRenderer1.h"
+#include "ImageRenderer.h"
 #include "DepthEstimator.h"
 
 /**
@@ -42,7 +42,7 @@ class CDCDepthEstimator :
 
 	typedef Vec2f fPair;
 	
-	ImageRenderer1* renderer;
+	ImageRenderer* renderer;
 
 	Size imageSize;
 	Vec2f angularCorrection;

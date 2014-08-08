@@ -107,6 +107,7 @@ LfpLoader::~LfpLoader(void)
 void LfpLoader::readMetadata(const rapidjson::Document& doc)
 {
 	const rapidjson::Value& devices = doc["devices"];
+	const rapidjson::Value& lens = devices["lens"];
 	const rapidjson::Value& mla = devices["mla"];
 	const rapidjson::Value& scaleFactor = mla["scaleFactor"];
 	const rapidjson::Value& sensorOffset = mla["sensorOffset"];
@@ -118,7 +119,8 @@ void LfpLoader::readMetadata(const rapidjson::Document& doc)
 	const rapidjson::Value& ccmRgbToSrgbArray = color["ccmRgbToSrgbArray"];
 
 	this->pixelPitch	= devices["sensor"]["pixelPitch"].GetDouble();
-	this->focalLength	= devices["lens"]["focalLength"].GetDouble();
+	this->focalLength	= lens["focalLength"].GetDouble();
+	this->lambdaInfinity	= lens["infinityLambda"].GetDouble();
 	this->lensPitch		= mla["lensPitch"].GetDouble();
 	this->rotationAngle	= mla["rotation"].GetDouble();
 	this->scaleFactor	= Vec2d(scaleFactor["x"].GetDouble(),

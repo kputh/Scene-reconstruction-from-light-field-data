@@ -36,6 +36,7 @@ class LightFieldPicture /*:
 	Vec2f fromLensCenterToOrigin;
 
 	Mat calibrationMatrix;
+	double distanceFromImageToLens;
 
 	void generateCalibrationMatrix();
 
@@ -66,4 +67,6 @@ public:
 	double getRawFocalLength() const;
 
 	Mat getCalibrationMatrix() const;
+	double getDistanceFromImageToLens() const;
+	double getLambdaInfinity() const;
 };

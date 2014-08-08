@@ -37,6 +37,7 @@ public:
 	int black, white;
 	double gamma;
 	Mat whiteBalancingMatrix, colorCorrectionMatrix;
+	double lambdaInfinity;
 
 	LfpLoader(void);
 	LfpLoader(const string& pathToFile);
