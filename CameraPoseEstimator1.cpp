@@ -1,6 +1,8 @@
 #include <iostream>	// for debugging
+#include <string>	// for debugging
 #include <opencv2\imgproc\imgproc.hpp>
 #include <opencv2\calib3d\calib3d.hpp>
+#include <opencv2\highgui\highgui.hpp>	// for debugging
 #include "CameraPoseEstimator1.h"
 
 
@@ -20,7 +22,6 @@ const Mat CameraPoseEstimator1::R90 = (Mat_<double>(3, 3) <<
 CameraPoseEstimator1::CameraPoseEstimator1(void)
 {
 	const bool doCrossCheck = true;
-
 	
 	Feature2D* detectorAndExtractor = new ORB();
 	this->detector = detectorAndExtractor;
@@ -55,26 +56,18 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 	vector<Mat> descriptors				= vector<Mat>(imageCount);
 
 	// 1) detect features and extract descriptors
-	this->detector->detect(images, keyPoints);
-	this->extractor->compute(images, keyPoints, descriptors);
+	// ORB-specific image conversion
+	vector<Mat> bwImages = vector<Mat>(images.size());
+	for (int i = 0; i < images.size(); i++)
+	{
+		//cvtColor(images.at(i), bwImages.at(i), CV_RGB2GRAY);
+		//bwImages.at(i).convertTo(bwImages.at(i), CV_8UC1, 255);
+		images.at(i).convertTo(bwImages.at(i), CV_8UC1, 255);
+	}
+	this->detector->detect(bwImages, keyPoints);
+	this->extractor->compute(bwImages, keyPoints, descriptors);
 
 	// 2) match features
-	/*
-	const int numberOfSetMatchings = descriptors.size() - 1;
-	Mat queryDescriptors;
-	vector<Mat> trainDescriptors = vector<Mat>(descriptors);
-	vector<vector<DMatch>> matches = vector<vector<DMatch>>(numberOfSetMatchings);
-	for (int i = numberOfSetMatchings - 1; i >= 0; i--)
-	{
-		queryDescriptors = trainDescriptors.back();
-		trainDescriptors.pop_back();
-
-		this->matcher->clear();
-		this->matcher->add(trainDescriptors);
-
-		this->matcher->match(queryDescriptors, matches.at(i));
-	}
-	*/
 	vector<vector<DMatch>> matches = vector<vector<DMatch>>(descriptors.size());
 	vector<Point2f> points1, points2;
 	int pointCount, queryIndex, trainIndex, validPointCount, bestPointCount;
@@ -89,6 +82,15 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 		// match descriptors
 		this->matcher->match(descriptors.at(i), descriptors.at(i + 1),
 			matches.at(i));
+
+		// debugging
+		/*
+		Mat matchImg;
+		drawMatches(images.at(i), keyPoints.at(i), images.at(i+1), keyPoints.at(i+1), matches.at(i), matchImg);
+		string window0 = "matches " + to_string((long double) i);
+		namedWindow(window0, WINDOW_AUTOSIZE);// Create a window for display. (scale down size)
+		imshow(window0, matchImg);
+		*/
 
 		// compute fundamental matrix
 		const int FUNDAMENTAL_MATRIX_METHOD = CV_FM_RANSAC;
@@ -105,6 +107,7 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 			points2[j] = keyPoints.at(i + 1).at(trainIndex).pt;
 		}
 		F = findFundamentalMat(points1, points2, FUNDAMENTAL_MATRIX_METHOD);
+		cout << "matches: " << pointCount << endl;
 
 		// compute essential matrix from fundamental matrix
 		E = calibrationMatrix.t() * F * calibrationMatrix;
@@ -143,6 +146,7 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 			threshold(resultPoints.row(2), resultPoints, ZERO_THRESHOLD, 1.0,
 				THRESH_BINARY);
 			validPointCount = countNonZero(resultPoints);
+			cout << "valid point count = " << validPointCount << endl;
 			if (validPointCount > bestPointCount)
 			{
 				bestPointCount = validPointCount;
@@ -153,10 +157,10 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 		assert (bestPointCount > 0);
 
 		// combine rotations and translations to form R and t to the first camera
-		totalRotation *= bestR;	// the order is important
 		totalTranslation += totalRotation * bestT;
+		totalRotation *= bestR;	// the order is important
 
-		rotations.push_back(totalRotation);
-		translations.push_back(totalTranslation);
+		rotations.push_back(totalRotation.clone());
+		translations.push_back(totalTranslation.clone());
 	}
 }
