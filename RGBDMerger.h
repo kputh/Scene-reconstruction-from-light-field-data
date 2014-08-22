@@ -23,7 +23,7 @@ public:
 	RGBDMerger(void);
 	~RGBDMerger(void);
 
-	virtual Mat merge(const vector<Mat>& images, const vector<Mat>& maps,
-		const Mat& calibrationMatrix) =0;
+	virtual Mat merge(const vector<Mat>& images, const vector<Mat>& depthMaps,
+		const vector<Mat>& confidenceMaps, const Mat& calibrationMatrix) =0;
 };
 
