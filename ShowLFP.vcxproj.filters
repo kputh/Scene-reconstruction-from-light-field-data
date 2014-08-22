@@ -28,6 +28,9 @@
     <Filter Include="Depth Map Fusion">
       <UniqueIdentifier>{252dae1e-9569-49ca-994a-3d4f93102f70}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Camera pose estimation">
+      <UniqueIdentifier>{609f57a8-7e4c-48c2-b129-622580c2e557}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -108,17 +111,23 @@
     <ClCompile Include="NormalDistribution.cpp">
       <Filter>Image Rendering</Filter>
     </ClCompile>
-    <ClCompile Include="CameraPoseEstimator.cpp">
-      <Filter>Depth Map Fusion</Filter>
-    </ClCompile>
     <ClCompile Include="DepthToPointTranslator1.cpp">
-      <Filter>Depth Map Fusion</Filter>
-    </ClCompile>
-    <ClCompile Include="CameraPoseEstimator1.cpp">
       <Filter>Depth Map Fusion</Filter>
     </ClCompile>
     <ClCompile Include="DepthToPointTranslator.cpp">
       <Filter>Depth Map Fusion</Filter>
+    </ClCompile>
+    <ClCompile Include="CameraPoseEstimator.cpp">
+      <Filter>Camera pose estimation</Filter>
+    </ClCompile>
+    <ClCompile Include="CameraPoseEstimator1.cpp">
+      <Filter>Camera pose estimation</Filter>
+    </ClCompile>
+    <ClCompile Include="ImageRenderer4.cpp">
+      <Filter>Image Rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="ReconstructionPipeline.cpp">
+      <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -203,17 +212,26 @@
     <ClInclude Include="NormalDistribution.h">
       <Filter>Image Rendering</Filter>
     </ClInclude>
-    <ClInclude Include="CameraPoseEstimator.h">
-      <Filter>Depth Map Fusion</Filter>
-    </ClInclude>
     <ClInclude Include="DepthToPointTranslator1.h">
-      <Filter>Depth Map Fusion</Filter>
-    </ClInclude>
-    <ClInclude Include="CameraPoseEstimator1.h">
       <Filter>Depth Map Fusion</Filter>
     </ClInclude>
     <ClInclude Include="DepthToPointTranslator.h">
       <Filter>Depth Map Fusion</Filter>
     </ClInclude>
+    <ClInclude Include="CameraPoseEstimator1.h">
+      <Filter>Camera pose estimation</Filter>
+    </ClInclude>
+    <ClInclude Include="CameraPoseEstimator.h">
+      <Filter>Camera pose estimation</Filter>
+    </ClInclude>
+    <ClInclude Include="ImageRenderer4.h">
+      <Filter>Image Rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="ReconstructionPipeline.h">
+      <Filter>Headerdateien</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\Masterarbeit\LICENSE.txt" />
   </ItemGroup>
 </Project>

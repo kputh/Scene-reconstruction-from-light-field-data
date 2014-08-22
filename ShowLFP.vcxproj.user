@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>C:\Users\Kai\Downloads\Tao13_LF_Depth\DEPTH_FROM_CORR_DEFOC\input\dataset\IMG_3.lfp</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>C:\Users\Kai\Downloads\lfpextraction\Spielzeugauto_4cm_Entfernung.lfp</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <ShowAllFiles>false</ShowAllFiles>
   </PropertyGroup>

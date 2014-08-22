@@ -11,6 +11,7 @@
 #include "LightFieldPicture.h"
 #include "ImageRenderer.h"
 #include "ImageRenderer1.h"
+#include "ImageRenderer4.h"
 #include "DepthEstimator1.h"
 #include "CDCDepthEstimator.h"
 #include "DepthToPointTranslator.h"
@@ -19,11 +20,12 @@
 #include "CameraPoseEstimator1.h"
 #include "RGBDMerger.h"
 #include "RGBDMerger1.h"
+#include "ReconstructionPipeline.h"
 
 using namespace cv;
 using namespace std;
 
-const int lfpCount = 1;
+const int lfpCount = 2;
 const string lfpPaths[] = {
 	"C:\\Users\\Kai\\Downloads\\lfpextraction\\statue\\statue1.lfp",
 	"C:\\Users\\Kai\\Downloads\\lfpextraction\\statue\\statue2.lfp",
@@ -35,6 +37,56 @@ const string lfpPaths[] = {
 };
 
 const char KERNEL_PATH[] = "C:\\Users\\Kai\\Downloads\\opencv_ocl_kernels\\";
+
+void showRefocusSeries(const LightFieldPicture& lightfield)
+{
+	ImageRenderer* renderer = new ImageRenderer4();
+	renderer->setLightfield(lightfield);
+
+	Mat image;
+	string windowName;
+	for (int i = -20; i < lightfield.getLambdaInfinity() + 1.; i += 1)
+	{
+		renderer->setAlpha(i);
+		renderer->renderImage().download(image);
+
+		const string path = "C:\\Users\\Kai\\Downloads\\lfpextraction\\refocusedImage";
+		saveImageToPNGFile(path + to_string((long double)i) + ".png", image);
+		/*
+		windowName = "refocused image with alpha = " + to_string((long double) i);
+		namedWindow(windowName, WINDOW_AUTOSIZE);// Create a window for display. (scale down size)
+		imshow(windowName, image);
+		*/
+	}
+
+	waitKey(0);
+}
+
+void renderReconstructionFromImageSeries(const string lfpPaths[])
+{
+	LightFieldPicture* lightfield;
+	CDCDepthEstimator* estimator = new CDCDepthEstimator;
+	RGBDMerger* merger = new RGBDMerger1();
+
+	Mat calibrationMatrix;
+	vector<Mat> depthMaps = vector<Mat>(lfpCount);
+	vector<Mat> confidenceMaps = vector<Mat>(lfpCount);
+	vector<Mat> aifImages = vector<Mat>(lfpCount);
+
+	for (int i = 0; i < lfpCount; i++)
+	{
+		lightfield = new LightFieldPicture(lfpPaths[i]);
+		estimator->estimateDepth(*lightfield);
+		depthMaps[i] = estimator->getDepthMap();
+		confidenceMaps[i] = estimator->getConfidenceMap();
+		aifImages[i] = estimator->getExtendedDepthOfFieldImage();
+	}
+
+	calibrationMatrix = lightfield->getCalibrationMatrix();
+	merger->merge(aifImages, depthMaps, confidenceMaps, calibrationMatrix);
+
+	visualizePointCloud(merger->pointCloud, merger->pointColors);
+}
 
 int main( int argc, char** argv )
 {
@@ -49,29 +101,15 @@ int main( int argc, char** argv )
 	Mat rawImage, subapertureImage, image1, image2, image4, image14;
 	oclMat ocl1, ocl2;
 	try {
-		LightFieldPicture* lightfield;
-		CDCDepthEstimator* estimator = new CDCDepthEstimator;
-		RGBDMerger* merger = new RGBDMerger1();
+		/*
+		LightFieldPicture* lf = new LightFieldPicture(argv[1]);
 
-		Mat calibrationMatrix;
-		vector<Mat> depthMaps = vector<Mat>(lfpCount);
-		vector<Mat> confidenceMaps = vector<Mat>(lfpCount);
-		vector<Mat> aifImages = vector<Mat>(lfpCount);
-
-		for (int i = 0; i < lfpCount; i++)
-		{
-			lightfield = new LightFieldPicture(lfpPaths[i]);
-			estimator->estimateDepth(*lightfield);
-			depthMaps[i] = estimator->getDepthMap();
-			confidenceMaps[i] = estimator->getConfidenceMap();
-			aifImages[i] = estimator->getExtendedDepthOfFieldImage();
-		}
-
-		calibrationMatrix = lightfield->getCalibrationMatrix();
-		merger->merge(aifImages, depthMaps, calibrationMatrix);
-
-		visualizePointCloud(merger->pointCloud, merger->pointColors);
-
+		showRefocusSeries(*lf);
+		*/
+		
+		ReconstructionPipeline* pipeline = new ReconstructionPipeline();
+		//renderReconstructionFromImageSeries(lfpPaths);
+		
 		/*
 		double t0 = (double)getTickCount();
 		LightFieldPicture lf(argv[1]);
@@ -80,7 +118,8 @@ int main( int argc, char** argv )
 		double d0 = (t1 - t0) / getTickFrequency();
 		cout << "Loading of file at " << argv[1] << " successful." << endl;
 		cout << "Loading of light field took " << d0 << " seconds." << endl;
-		
+		*/
+		/*
 		ImageRenderer1 renderer = ImageRenderer1();
 		renderer.setAlpha(1.0);
 		renderer.setLightfield(lf);
@@ -91,7 +130,7 @@ int main( int argc, char** argv )
 
 		d0 = (t1 - t0) / getTickFrequency();
 		cout << "Rendering took " << d0 << " seconds." << endl;
-
+		*/
 		/*
 		vector<Mat> images = vector<Mat>();
 		string path;
@@ -105,7 +144,7 @@ int main( int argc, char** argv )
 			image1.convertTo(image1, CV_8UC1, 255);
 			images.push_back(image1);
 		}
-
+		*/
 		/*
 		vector<Mat> images = vector<Mat>();
 		for (int i = 0; i < 4; i++)
@@ -134,21 +173,26 @@ int main( int argc, char** argv )
 
 		d0 = (t1 - t0) / getTickFrequency();
 		cout << "Depth estimation took " << d0 << " seconds." << endl;
-
+		*/
+		/*
 		ocl2.download(image1);
 		normalize(image1, image1, 0, 1, NORM_MINMAX);
 		string window0 = "normalized depth";
 		namedWindow(window0, WINDOW_AUTOSIZE);// Create a window for display. (scale down size)
 		imshow(window0, image1);
-
+		*/
 		//waitKey(0);
-		
+		/*
+		estimator->getExtendedDepthOfFieldImage().download(image1);
 		ocl2.download(image2);
+
 		DepthToPointTranslator* translator = new DepthToPointTranslator1();
+		const Mat calibrationMatrix = lf.getCalibrationMatrix();
 		Mat partialReconstruction = translator->translateDepthToPoints(image2,
 			calibrationMatrix, Mat::eye(3,3,CV_64FC1), Mat::zeros(3,1,CV_64FC1));
 
 		visualizePointCloud(partialReconstruction, image1);
+		*/
 		/*
 		/// Create a window
 		viz::Viz3d myWindow("Coordinate Frame");
@@ -268,23 +312,6 @@ int main( int argc, char** argv )
 		cerr << e->what() << endl;
 		return -1;
 	}
-
-	//saveImageToPNGFile(string(argv[1]) + string(".png"), image1);
-	//cin.ignore();
-	// show image
-	//namedWindow( "Display window", WINDOW_AUTOSIZE );// Create a window for display. (original size)
-	
-	/*
-	string window1 = "difference image";
-	namedWindow(window1, WINDOW_NORMAL);// Create a window for display. (scale down size)
-	imshow(window1, image1);                   // Show our image inside it.
-	*/
-	/*
-	namedWindow( "1.0x", WINDOW_NORMAL );// Create a window for display. (original size)
-	imshow( "1.0x", image1 );                   // Show our image inside it.
-	*/
-
-	//waitKey(0);                                          // Wait for a keystroke in the window
 
 	return 0;
 }

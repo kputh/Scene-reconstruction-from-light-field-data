@@ -155,6 +155,7 @@
     <ClCompile Include="ImageRenderer1.cpp" />
     <ClCompile Include="ImageRenderer2.cpp" />
     <ClCompile Include="ImageRenderer3.cpp" />
+    <ClCompile Include="ImageRenderer4.cpp" />
     <ClCompile Include="LfpLoader.cpp" />
     <ClCompile Include="lfpsplitter.c" />
     <ClCompile Include="libs\MRF2.2\BP-S.cpp" />
@@ -170,6 +171,7 @@
     <ClCompile Include="LightFieldPicture.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="NormalDistribution.cpp" />
+    <ClCompile Include="ReconstructionPipeline.cpp" />
     <ClCompile Include="RGBDMerger.cpp" />
     <ClCompile Include="RGBDMerger1.cpp" />
     <ClCompile Include="StereoBMDisparityEstimator.cpp" />
@@ -187,6 +189,7 @@
     <ClInclude Include="ImageRenderer1.h" />
     <ClInclude Include="ImageRenderer2.h" />
     <ClInclude Include="ImageRenderer3.h" />
+    <ClInclude Include="ImageRenderer4.h" />
     <ClInclude Include="LfpLoader.h" />
     <ClInclude Include="lfpsplitter.h" />
     <ClInclude Include="libs\MRF2.2\block.h" />
@@ -203,10 +206,14 @@
     <ClInclude Include="libs\MRF2.2\typeTruncatedQuadratic2D.h" />
     <ClInclude Include="LightFieldPicture.h" />
     <ClInclude Include="NormalDistribution.h" />
+    <ClInclude Include="ReconstructionPipeline.h" />
     <ClInclude Include="RGBDMerger.h" />
     <ClInclude Include="RGBDMerger1.h" />
     <ClInclude Include="StereoBMDisparityEstimator.h" />
     <ClInclude Include="Util.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\Masterarbeit\LICENSE.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

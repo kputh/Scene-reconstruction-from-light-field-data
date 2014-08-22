@@ -16,7 +16,6 @@ double roundTo(double value, double target);
 double roundToZero(double value);
 Vec2d roundToZero(Vec2d vector);
 void adjustLuminanceSpace(Mat& image);
-void saveImageToPNGFile(string fileName, Mat image);
 void appendRayCountingChannel(Mat& image);
 void normalizeByRayCount(Mat& image);
 void appendRayCountingChannel(oclMat& image);
@@ -26,6 +25,7 @@ void normalizeByRayCount(oclMat& image, const oclMat& rayCountMat);
 void normalize(oclMat& mat);
 
 // debugging functions
+void saveImageToPNGFile(string fileName, Mat image);
 void saveImageArc(LightFieldPicture lightfield, string sourceFileName,
 	int imageCount);
 void visualizeCameraTrajectory(const CameraPoseEstimator& estimator,

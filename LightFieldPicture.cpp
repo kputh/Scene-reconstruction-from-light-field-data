@@ -90,6 +90,7 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 	this->ANGULAR_RESOLUTION	= Size(lensPitch, lensPitch);
 
 	// calculate spartial resolution of the light field
+	// TODO or read after rectification
 	const Size correctedRawSize = RotatedRect(IMAGE_ORIGIN, loader.bayerImage.size(),
 		-this->rotationAngle).boundingRect().size();
 	const double lensWidth		= lensPitchInPixels * loader.scaleFactor[0];
