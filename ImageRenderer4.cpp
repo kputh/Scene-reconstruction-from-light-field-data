@@ -22,7 +22,10 @@ void ImageRenderer4::setLightfield(const LightFieldPicture& lightfield)
 
 void ImageRenderer4::setAlpha(float alpha)
 {
-	this->weight = 1.0 - 1.0 / alpha;
+	if (alpha == 0)
+		this->weight = 0;
+	else
+		this->weight = 1.0 - 1.0 / alpha;
 }
 
 
@@ -35,9 +38,32 @@ oclMat ImageRenderer4::renderImage() const
 	oclMat subapertureImage, modifiedSubapertureImage, rayCountMat;
 	Mat transformation = Mat::eye(2, 3, CV_32FC1);
 
-	if (weight > 1)
+	if (abs(weight) >= 1)
 	{
-		// TODO use interpolated sub-aperture images
+		const float stepSize = 1. / ceil(abs(weight));
+		float u, v;
+		for(u = 0; u <= this->lightfield.ANGULAR_RESOLUTION.width - 1; u += stepSize)
+		{
+			transformation.at<float>(0, 2) = -(u - 5) * weight;
+	
+			for(v = 0; v <= this->lightfield.ANGULAR_RESOLUTION.height - 1; v += stepSize)
+			{
+				//subapertureImage = lightfield.getSubapertureImageF(u, v);
+				subapertureImage = lightfield.getSubapertureImageI(round(u), round(v));
+				//normalize(subapertureImage);
+	
+				transformation.at<float>(1, 2) = -(v - 5) * weight;
+
+				// shift sub-aperture image by (u, v) * (1 - 1 / alpha)	
+				ocl::warpAffine(subapertureImage, modifiedSubapertureImage,
+					transformation, lightfield.SPARTIAL_RESOLUTION, INTER_CUBIC);
+
+				rayCountMat = extractRayCountMat(modifiedSubapertureImage);
+			
+				ocl::add(modifiedSubapertureImage, image, image);
+				ocl::add(rayCountMat, rayCountAccumulator, rayCountAccumulator);
+			}
+		}
 	}
 	else
 	{
