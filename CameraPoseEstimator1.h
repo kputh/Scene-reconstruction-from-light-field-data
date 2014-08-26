@@ -1,5 +1,6 @@
 #pragma once
 
+#include <opencv2\ocl\ocl.hpp>
 #include "CameraPoseEstimator.h"
 
 /**
@@ -19,6 +20,7 @@ class CameraPoseEstimator1 :
 	FeatureDetector* detector;
 	DescriptorExtractor* extractor;
 	DescriptorMatcher* matcher;
+	//ocl::BruteForceMatcher_OCL_base* matcher;
 
 public:
 	CameraPoseEstimator1(void);

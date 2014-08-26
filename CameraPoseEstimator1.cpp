@@ -5,6 +5,7 @@
 #include <opencv2\highgui\highgui.hpp>	// for debugging
 #include "CameraPoseEstimator1.h"
 
+using namespace ocl;
 
 const double CameraPoseEstimator1::ZERO_THRESHOLD = 0.01;
 const Mat CameraPoseEstimator1::TEST_POINTS = (Mat_<double>(4, 13) <<
@@ -21,17 +22,14 @@ const Mat CameraPoseEstimator1::R90 = (Mat_<double>(3, 3) <<
 
 CameraPoseEstimator1::CameraPoseEstimator1(void)
 {
-	const bool doCrossCheck = true;
+	const bool doCrossCheck = false;
 	
 	Feature2D* detectorAndExtractor = new ORB();
 	this->detector = detectorAndExtractor;
 	this->extractor = detectorAndExtractor;
 	this->matcher = new BFMatcher(NORM_HAMMING, doCrossCheck);
-	
-	//this->detector = new StarFeatureDetector();
-	//this->detector = new FastFeatureDetector();
-	//this->extractor = new FREAK();
-	//this->matcher = new BFMatcher(NORM_HAMMING, doCrossCheck);
+	//this->matcher = new ocl::BruteForceMatcher_OCL_base(
+	//	ocl::BruteForceMatcher_OCL_base::HammingDist);	// no cross-checking
 }
 
 
@@ -47,6 +45,8 @@ CameraPoseEstimator1::~CameraPoseEstimator1(void)
 void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 	const Mat& calibrationMatrix)
 {
+	cout << "CameraPoseEstimator1::estimateCameraPoses(): start" << endl;
+
 	// initialize result vectors
 	this->rotations		= vector<rotationType>();
 	this->translations	= vector<translationType>();
@@ -60,15 +60,23 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 	vector<Mat> bwImages = vector<Mat>(images.size());
 	for (int i = 0; i < images.size(); i++)
 	{
-		//cvtColor(images.at(i), bwImages.at(i), CV_RGB2GRAY);
-		//bwImages.at(i).convertTo(bwImages.at(i), CV_8UC1, 255);
-		images.at(i).convertTo(bwImages.at(i), CV_8UC1, 255);
+		cvtColor(images.at(i), bwImages.at(i), CV_RGB2GRAY);
+		bwImages.at(i).convertTo(bwImages.at(i), CV_8UC1, 255);
 	}
 	this->detector->detect(bwImages, keyPoints);
 	this->extractor->compute(bwImages, keyPoints, descriptors);
+	
+	/*
+	vector<oclMat> oclDescriptors = vector<oclMat>(descriptors.size());
+	for (int i = 0; i < descriptors.size(); i++)
+		oclDescriptors.at(i) = oclMat(descriptors.at(i));
+	*/
 
 	// 2) match features
-	vector<vector<DMatch>> matches = vector<vector<DMatch>>(descriptors.size());
+	vector<DMatch> matches = vector<DMatch>();
+	vector<vector<DMatch>> matches12, matches21;
+	vector<DMatch> knn1, knn2;
+	DMatch match12, match21;
 	vector<Point2f> points1, points2;
 	int pointCount, queryIndex, trainIndex, validPointCount, bestPointCount;
 	Mat F, E, w, u, vt, t1, t2, currentR, currentT, bestR, bestT, Rt,
@@ -77,37 +85,105 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 	vector<Mat> t12 = vector<Mat>();
 	rotationType totalRotation = Mat::eye(3, 3, CV_64FC1);
 	translationType totalTranslation = Mat(3, 1, CV_64FC1, Scalar(0));
-	for (int i = 0; i < descriptors.size() - 1; i++)
+	rotations.push_back(totalRotation.clone());
+	translations.push_back(totalTranslation.clone());
+	int imgIdx1, imgIdx2, matchIndex;
+	const float distanceThreshold = 0.75;			//TODO constant
+	for (imgIdx1 = 0, imgIdx2 = 1; imgIdx1 < images.size() - 1; imgIdx1++, imgIdx2++)
 	{
-		// match descriptors
-		this->matcher->match(descriptors.at(i), descriptors.at(i + 1),
-			matches.at(i));
-
-		// debugging
+		// match
+		matcher->knnMatch(descriptors.at(imgIdx1), descriptors.at(imgIdx2), matches12, 2);
+		matcher->knnMatch(descriptors.at(imgIdx2), descriptors.at(imgIdx1), matches21, 2);
 		/*
+		matcher->knnMatch(oclDescriptors.at(imgIdx1), oclDescriptors.at(imgIdx2),
+			matches12, 2);
+		matcher->knnMatch(oclDescriptors.at(imgIdx2), oclDescriptors.at(imgIdx1),
+			matches21, 2);
+		*/
+		// cross-check and symmetric ratio test
+		matches.clear();
+		for (matchIndex = 0; matchIndex < matches12.size(); matchIndex++)
+		{
+			knn1 = matches12.at(matchIndex);
+			match12 = knn1.at(0);
+			knn2 = matches21.at(match12.trainIdx);
+			match21 = knn2.at(0);
+			
+			if (match21.trainIdx == match12.queryIdx
+				&& knn1.at(0).distance / knn1.at(1).distance < distanceThreshold
+				&& knn2.at(0).distance / knn2.at(1).distance < distanceThreshold
+			)
+
+			matches.push_back(match12);
+		}
+
+		if (matches.size() < 8)
+		{
+			matches.clear();
+			for (matchIndex = 0; matchIndex < matches12.size(); matchIndex++)
+			{
+				knn1 = matches12.at(matchIndex);
+				match12 = knn1.at(0);
+				knn2 = matches21.at(match12.trainIdx);
+				match21 = knn2.at(0);
+			
+				if (match21.trainIdx == match12.queryIdx
+					&& knn1.at(0).distance / knn1.at(1).distance < distanceThreshold
+					//&& knn2.at(0).distance / knn2.at(1).distance < distanceThreshold
+				)
+
+					matches.push_back(match12);
+			}
+		}
+		
+		if (matches.size() < 8)
+		{
+			matches.clear();
+			for (matchIndex = 0; matchIndex < matches12.size(); matchIndex++)
+			{
+				knn1 = matches12.at(matchIndex);
+				match12 = knn1.at(0);
+				knn2 = matches21.at(match12.trainIdx);
+				match21 = knn2.at(0);
+			
+				if (match21.trainIdx == match12.queryIdx
+					//&& knn1.at(0).distance / knn1.at(1).distance < distanceThreshold
+					//&& knn2.at(0).distance / knn2.at(1).distance < distanceThreshold
+				)
+
+					matches.push_back(match12);
+			}
+		}
+
+		/*
+		// debugging - render matches
 		Mat matchImg;
-		drawMatches(images.at(i), keyPoints.at(i), images.at(i+1), keyPoints.at(i+1), matches.at(i), matchImg);
-		string window0 = "matches " + to_string((long double) i);
+		drawMatches(images.at(imgIdx1), keyPoints.at(imgIdx1),
+			images.at(imgIdx2), keyPoints.at(imgIdx2), matches, matchImg);
+		string window0 = "matches " + to_string((long double) imgIdx1);
 		namedWindow(window0, WINDOW_AUTOSIZE);// Create a window for display. (scale down size)
 		imshow(window0, matchImg);
+
+		waitKey(0);
 		*/
+
+		assert (matches.size() >= 8);
 
 		// compute fundamental matrix
 		const int FUNDAMENTAL_MATRIX_METHOD = CV_FM_RANSAC;
 
 		// initialize the points here ... */
-		pointCount = matches.at(i).size();
+		pointCount = matches.size();
 		points1 = vector<Point2f>(pointCount);
 		points2 = vector<Point2f>(pointCount);
 		for( int j = 0; j < pointCount; j++ )
 		{
-			queryIndex = matches.at(i).at(j).queryIdx;
-			trainIndex = matches.at(i).at(j).trainIdx;
-			points1[j] = keyPoints.at(i).at(queryIndex).pt;
-			points2[j] = keyPoints.at(i + 1).at(trainIndex).pt;
+			queryIndex = matches.at(j).queryIdx;
+			trainIndex = matches.at(j).trainIdx;
+			points1[j] = keyPoints.at(imgIdx1).at(queryIndex).pt;
+			points2[j] = keyPoints.at(imgIdx2).at(trainIndex).pt;
 		}
 		F = findFundamentalMat(points1, points2, FUNDAMENTAL_MATRIX_METHOD);
-		cout << "matches: " << pointCount << endl;
 
 		// compute essential matrix from fundamental matrix
 		E = calibrationMatrix.t() * F * calibrationMatrix;
@@ -146,7 +222,6 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 			threshold(resultPoints.row(2), resultPoints, ZERO_THRESHOLD, 1.0,
 				THRESH_BINARY);
 			validPointCount = countNonZero(resultPoints);
-			cout << "valid point count = " << validPointCount << endl;
 			if (validPointCount > bestPointCount)
 			{
 				bestPointCount = validPointCount;
@@ -156,6 +231,9 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 		}
 		assert (bestPointCount > 0);
 
+		printf("CameraPoseEstimator1: %i points in view for pose %i\n",
+			validPointCount, imgIdx1);
+
 		// combine rotations and translations to form R and t to the first camera
 		totalTranslation += totalRotation * bestT;
 		totalRotation *= bestR;	// the order is important
@@ -163,4 +241,9 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 		rotations.push_back(totalRotation.clone());
 		translations.push_back(totalTranslation.clone());
 	}
+
+	assert (rotations.size() == images.size());
+	assert (translations.size() == images.size());
+
+	cout << "CameraPoseEstimator1::estimateCameraPoses(): end" << endl;
 }

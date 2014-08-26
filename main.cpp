@@ -25,7 +25,7 @@
 using namespace cv;
 using namespace std;
 
-const int lfpCount = 2;
+const int lfpCount = 7;
 const string lfpPaths[] = {
 	"C:\\Users\\Kai\\Downloads\\lfpextraction\\statue\\statue1.lfp",
 	"C:\\Users\\Kai\\Downloads\\lfpextraction\\statue\\statue2.lfp",
@@ -88,6 +88,43 @@ void renderReconstructionFromImageSeries(const string lfpPaths[])
 	visualizePointCloud(merger->pointCloud, merger->pointColors);
 }
 
+vector<LightFieldPicture> loadLightFieldPictures()
+{
+	vector<LightFieldPicture> lfps = vector<LightFieldPicture>(lfpCount);
+	for (int i = 0; i < lfpCount; i++)
+	{
+		lfps.at(i) = LightFieldPicture(lfpPaths[i]);
+	}
+
+	cout << lfpCount << " light-field files loaded" << endl;
+	return lfps;
+}
+
+void testCameraPoseEstimation()
+{
+	vector<LightFieldPicture> lightfields = loadLightFieldPictures();
+
+	vector<Mat> images = vector<Mat>(lightfields.size());
+	ImageRenderer* renderer = new ImageRenderer4();
+	renderer->setAlpha(1.1);
+	for (int i = 0; i < images.size(); i++)
+	{
+		renderer->setLightfield(lightfields.at(i));
+		renderer->renderImage().download(images.at(i));
+	}
+
+	Mat calibrationMatrix = lightfields.at(0).getCalibrationMatrix();
+	CameraPoseEstimator* poseEstimator = new CameraPoseEstimator1();
+	double t0 = (double)getTickCount();
+	poseEstimator->estimateCameraPoses(images, calibrationMatrix);
+	double t1 = (double)getTickCount();
+
+	double d0 = (t1 - t0) / getTickFrequency();
+	cout << "Camera pose estimation took " << d0 << " seconds." << endl;
+
+	visualizeCameraTrajectory(*poseEstimator, Matx33d(calibrationMatrix));
+}
+
 int main( int argc, char** argv )
 {
 	ocl::setBinaryPath(KERNEL_PATH);
@@ -101,13 +138,19 @@ int main( int argc, char** argv )
 	Mat rawImage, subapertureImage, image1, image2, image4, image14;
 	oclMat ocl1, ocl2;
 	try {
+		testCameraPoseEstimation();
 		/*
 		LightFieldPicture* lf = new LightFieldPicture(argv[1]);
 
 		showRefocusSeries(*lf);
 		*/
 		
+		vector<LightFieldPicture> lightfields = loadLightFieldPictures();
 		ReconstructionPipeline* pipeline = new ReconstructionPipeline();
+		pipeline->reconstructScene(lightfields);
+
+		visualizePointCloud(pipeline->pointCloud, pipeline->pointColors);
+
 		//renderReconstructionFromImageSeries(lfpPaths);
 		
 		/*
