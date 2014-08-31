@@ -79,7 +79,7 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 	DMatch match12, match21;
 	vector<Point2f> points1, points2;
 	int pointCount, queryIndex, trainIndex, validPointCount, bestPointCount;
-	Mat F, E, w, u, vt, t1, t2, currentR, currentT, bestR, bestT, Rt,
+	Mat F, w, u, vt, t1, t2, currentR, currentT, bestR, bestT, Rt,
 		resultPoints;
 	vector<Mat> R12 = vector<Mat>();
 	vector<Mat> t12 = vector<Mat>();
@@ -185,11 +185,8 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 		}
 		F = findFundamentalMat(points1, points2, FUNDAMENTAL_MATRIX_METHOD);
 
-		// compute essential matrix from fundamental matrix
-		E = calibrationMatrix.t() * F * calibrationMatrix;
-
-		// decompose essential matrix into rotation and translation
-		SVD::compute(E, w, u, vt);
+		// decompose fundamental matrix into rotation and translation
+		SVD::compute(F, w, u, vt);
 
 		t12.clear(); t12.push_back(u.col(2)); t12.push_back(-u.col(2));
 
