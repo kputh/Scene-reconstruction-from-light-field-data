@@ -1,4 +1,5 @@
 #include "LfpLoader.h"
+//#include "lfpsplitter.h"	// does not work
 #include "lfpsplitter.c"
 #include <iostream>	// used for debugging
 #include <opencv2/imgproc/imgproc.hpp>

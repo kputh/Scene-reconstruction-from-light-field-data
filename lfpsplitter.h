@@ -1,3 +1,5 @@
+// used by LfpLoader. See LfpLoader.h for information.
+
 #ifndef _LFPSPLITTER_H_
 #define _LFPSPLITTER_H_
 

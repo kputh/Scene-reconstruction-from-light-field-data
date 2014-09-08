@@ -4,6 +4,7 @@
 #include <opencv2\calib3d\calib3d.hpp>
 #include <opencv2\highgui\highgui.hpp>	// for debugging
 #include "CameraPoseEstimator1.h"
+#include "Util.h"	// for debugging: image saving
 
 using namespace ocl;
 
@@ -35,7 +36,6 @@ CameraPoseEstimator1::CameraPoseEstimator1(void)
 
 CameraPoseEstimator1::~CameraPoseEstimator1(void)
 {
-	//delete this->detectorAndExtractor;
 	delete this->detector;
 	delete this->extractor;
 	delete this->matcher;
@@ -45,7 +45,7 @@ CameraPoseEstimator1::~CameraPoseEstimator1(void)
 void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 	const Mat& calibrationMatrix)
 {
-	cout << "CameraPoseEstimator1::estimateCameraPoses(): start" << endl;
+	//cout << "CameraPoseEstimator1::estimateCameraPoses(): start" << endl;
 
 	// initialize result vectors
 	this->rotations		= vector<rotationType>();
@@ -89,11 +89,14 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 	translations.push_back(totalTranslation.clone());
 	int imgIdx1, imgIdx2, matchIndex;
 	const float distanceThreshold = 0.75;			//TODO constant
-	for (imgIdx1 = 0, imgIdx2 = 1; imgIdx1 < images.size() - 1; imgIdx1++, imgIdx2++)
+	for (imgIdx1 = 0, imgIdx2 = 1; imgIdx1 < images.size() - 1;
+		imgIdx1++, imgIdx2++)
 	{
 		// match
-		matcher->knnMatch(descriptors.at(imgIdx1), descriptors.at(imgIdx2), matches12, 2);
-		matcher->knnMatch(descriptors.at(imgIdx2), descriptors.at(imgIdx1), matches21, 2);
+		matcher->knnMatch(descriptors.at(imgIdx1), descriptors.at(imgIdx2),
+			matches12, 2);
+		matcher->knnMatch(descriptors.at(imgIdx2), descriptors.at(imgIdx1),
+			matches21, 2);
 		/*
 		matcher->knnMatch(oclDescriptors.at(imgIdx1), oclDescriptors.at(imgIdx2),
 			matches12, 2);
@@ -172,7 +175,7 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 		// compute fundamental matrix
 		const int FUNDAMENTAL_MATRIX_METHOD = CV_FM_RANSAC;
 
-		// initialize the points here ... */
+		// initialize the points here ...
 		pointCount = matches.size();
 		points1 = vector<Point2f>(pointCount);
 		points2 = vector<Point2f>(pointCount);
@@ -242,5 +245,5 @@ void CameraPoseEstimator1::estimateCameraPoses(const vector<Mat>& images,
 	assert (rotations.size() == images.size());
 	assert (translations.size() == images.size());
 
-	cout << "CameraPoseEstimator1::estimateCameraPoses(): end" << endl;
+	//cout << "CameraPoseEstimator1::estimateCameraPoses(): end" << endl;
 }

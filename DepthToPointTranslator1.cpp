@@ -36,13 +36,22 @@ Mat DepthToPointTranslator1::translateDepthToPoints(const Mat& depthMap,
 	cameraMatrix = K44 * Rt44;	
 
 	// 2) reproject image points with depth to 3D space
-	reprojectImageTo3D(depthMap, points, cameraMatrix.inv());
+	//reprojectImageTo3D(depthMap, points, cameraMatrix.inv());
 
-	// 3) scale to proper size
-	const float sx = 1.; // width / 2. * lightfield.loader.pixelPitch;
-	const float sy = -1.; // height / 2. * lightfield.loader.pixelPitch * cos(M_PI / 3.;)
-	const float sz = 1.;	// / (float) CDCDepthEstimator::ALPHA_MAX;
-	const Scalar scale = Scalar(sx, sy, sz);
+	const float lensPitch			= 1.389859962463379e-005;	// TODO get from LightFieldPicture
+	const float horizontalDistance	= lensPitch;
+	const float verticalDistance	= lensPitch * cos(M_PI / 6.);
+
+	points = Mat(depthMap.size(), CV_32FC3);
+	for (int y = 0; y < depthMap.rows; y++)
+	for (int x = 0; x < depthMap.cols; x++)
+		points.at<Vec3f>(y, x) = Vec3f(
+		x * horizontalDistance, y * verticalDistance, depthMap.at<float>(y, x));
+
+	perspectiveTransform(points, points, cameraMatrix.inv());
+
+	// 3) flip around x axis
+	const Scalar scale = Scalar(1, -1, 1);
 	points = points.mul(scale);
 
 	return points;

@@ -61,7 +61,7 @@ Mat DepthEstimator1::estimateDepth(const LightFieldPicture lightfield)
 	image1.copyTo(flowMap);
 	drawOptFlowMap(opticalFlow, flowMap, 16, 1.5, Scalar(0, 255, 0));
 
-	/* debug */
+	/* start of debugging code */
 	const int windowFlags = WINDOW_NORMAL;
 	const string window1 = "image1";
 	namedWindow(window1, windowFlags);
@@ -78,7 +78,7 @@ Mat DepthEstimator1::estimateDepth(const LightFieldPicture lightfield)
 	//cout << "optical flow = " << opticalFlow << endl;
 	
 	waitKey(0);
-	/* end of debug code */
+	/* end of debugging code */
 
 	return opticalFlow;
 }

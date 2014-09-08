@@ -26,6 +26,7 @@ void normalize(oclMat& mat);
 
 // debugging functions
 void saveImageToPNGFile(string fileName, Mat image);
+// unused, translates the view on a cirle, renders and saves images
 void saveImageArc(LightFieldPicture lightfield, string sourceFileName,
 	int imageCount);
 void visualizeCameraTrajectory(const CameraPoseEstimator& estimator,

@@ -42,14 +42,17 @@ oclMat ImageRenderer4::renderImage() const
 	{
 		const float stepSize = 1. / ceil(abs(weight));
 		float u, v;
-		for(u = 0; u <= this->lightfield.ANGULAR_RESOLUTION.width - 1; u += stepSize)
+		for(u = 0; u <= this->lightfield.ANGULAR_RESOLUTION.width - 1;
+			u += stepSize)
 		{
 			transformation.at<float>(0, 2) = -(u - 5) * weight;
 	
-			for(v = 0; v <= this->lightfield.ANGULAR_RESOLUTION.height - 1; v += stepSize)
+			for(v = 0; v <= this->lightfield.ANGULAR_RESOLUTION.height - 1;
+				v += stepSize)
 			{
 				//subapertureImage = lightfield.getSubapertureImageF(u, v);
-				subapertureImage = lightfield.getSubapertureImageI(round(u), round(v));
+				subapertureImage = lightfield.getSubapertureImageI(round(u),
+					round(v));
 				//normalize(subapertureImage);
 	
 				transformation.at<float>(1, 2) = -(v - 5) * weight;
@@ -91,7 +94,7 @@ oclMat ImageRenderer4::renderImage() const
 		}
 	}
 
-	// normalize each pixel by ray count
+	// normalization
 	normalizeByRayCount(image, rayCountAccumulator);
 	normalize(image);
 

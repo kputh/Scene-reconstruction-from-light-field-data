@@ -69,12 +69,13 @@ class CDCDepthEstimator :
 public:
 	static const int DEPTH_RESOLUTION;
 	static const float ALPHA_MIN;
-	static const float ALPHA_MAX;
 
 	CDCDepthEstimator(void);
 	~CDCDepthEstimator(void);
 
 	oclMat estimateDepth(const LightFieldPicture& lightfield);
+
+	// accessors for results
 	oclMat getDepthMap() const;
 	oclMat getConfidenceMap() const;
 	oclMat getExtendedDepthOfFieldImage() const;

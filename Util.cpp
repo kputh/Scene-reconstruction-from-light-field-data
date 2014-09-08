@@ -41,7 +41,8 @@ Vec2d roundToZero(Vec2d vector)
 	return vector;
 }
 
-void adjustLuminanceSpace(Mat& image)	// ist das nicht identisch zu CV::normalize()?
+// TODO is it different from CV::normalize()?
+void adjustLuminanceSpace(Mat& image)
 {
 	double minValue, maxValue, scaleFactor, offset;
 	minMaxLoc(image, &minValue, &maxValue);
@@ -261,7 +262,6 @@ void visualizePointCloud(const Mat& pointCloud, const Mat& image)
 		polygons.push_back(y * width + (x + 1));
 	}
 
-	//Mat p = Mat(polygons, false);
 	viz::WMesh meshWidget = viz::WMesh(pointCloud.reshape(0, 1), polygons,
 		colors.reshape(0, 1));
 

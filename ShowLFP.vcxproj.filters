@@ -13,23 +13,23 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Depth Estimation">
-      <UniqueIdentifier>{8ca800a0-89d8-4bfe-8dcd-eb546c9f7123}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Image Rendering">
-      <UniqueIdentifier>{e7385dd3-1cad-4b11-813a-5405493ce295}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Light Field">
-      <UniqueIdentifier>{c56f5a11-08e9-475a-a89f-60d3e7db6e4c}</UniqueIdentifier>
-    </Filter>
     <Filter Include="MRF 2.2 %28lib%29">
       <UniqueIdentifier>{53ea366d-e99f-4ef5-9c68-d40191973f2b}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Depth Map Fusion">
+    <Filter Include="depth estimation">
+      <UniqueIdentifier>{8ca800a0-89d8-4bfe-8dcd-eb546c9f7123}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="camera pose estimation">
+      <UniqueIdentifier>{609f57a8-7e4c-48c2-b129-622580c2e557}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="depth map fusion">
       <UniqueIdentifier>{252dae1e-9569-49ca-994a-3d4f93102f70}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Camera pose estimation">
-      <UniqueIdentifier>{609f57a8-7e4c-48c2-b129-622580c2e557}</UniqueIdentifier>
+    <Filter Include="image rendering">
+      <UniqueIdentifier>{e7385dd3-1cad-4b11-813a-5405493ce295}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="light field">
+      <UniqueIdentifier>{c56f5a11-08e9-475a-a89f-60d3e7db6e4c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -70,61 +70,61 @@
       <Filter>MRF 2.2 %28lib%29</Filter>
     </ClCompile>
     <ClCompile Include="LfpLoader.cpp">
-      <Filter>Light Field</Filter>
+      <Filter>light field</Filter>
     </ClCompile>
     <ClCompile Include="LightFieldPicture.cpp">
-      <Filter>Light Field</Filter>
+      <Filter>light field</Filter>
     </ClCompile>
     <ClCompile Include="lfpsplitter.c">
-      <Filter>Light Field</Filter>
+      <Filter>light field</Filter>
     </ClCompile>
     <ClCompile Include="ImageRenderer1.cpp">
-      <Filter>Image Rendering</Filter>
+      <Filter>image rendering</Filter>
     </ClCompile>
     <ClCompile Include="CDCDepthEstimator.cpp">
-      <Filter>Depth Estimation</Filter>
+      <Filter>depth estimation</Filter>
     </ClCompile>
     <ClCompile Include="DepthEstimator1.cpp">
-      <Filter>Depth Estimation</Filter>
+      <Filter>depth estimation</Filter>
     </ClCompile>
     <ClCompile Include="DepthEstimator.cpp">
-      <Filter>Depth Estimation</Filter>
+      <Filter>depth estimation</Filter>
     </ClCompile>
     <ClCompile Include="StereoBMDisparityEstimator.cpp">
-      <Filter>Depth Estimation</Filter>
+      <Filter>depth estimation</Filter>
     </ClCompile>
     <ClCompile Include="RGBDMerger.cpp">
-      <Filter>Depth Map Fusion</Filter>
+      <Filter>depth map fusion</Filter>
     </ClCompile>
     <ClCompile Include="RGBDMerger1.cpp">
-      <Filter>Depth Map Fusion</Filter>
+      <Filter>depth map fusion</Filter>
     </ClCompile>
     <ClCompile Include="ImageRenderer.cpp">
-      <Filter>Image Rendering</Filter>
+      <Filter>image rendering</Filter>
     </ClCompile>
     <ClCompile Include="ImageRenderer2.cpp">
-      <Filter>Image Rendering</Filter>
+      <Filter>image rendering</Filter>
     </ClCompile>
     <ClCompile Include="ImageRenderer3.cpp">
-      <Filter>Image Rendering</Filter>
+      <Filter>image rendering</Filter>
     </ClCompile>
     <ClCompile Include="NormalDistribution.cpp">
-      <Filter>Image Rendering</Filter>
+      <Filter>image rendering</Filter>
     </ClCompile>
     <ClCompile Include="DepthToPointTranslator1.cpp">
-      <Filter>Depth Map Fusion</Filter>
+      <Filter>depth map fusion</Filter>
     </ClCompile>
     <ClCompile Include="DepthToPointTranslator.cpp">
-      <Filter>Depth Map Fusion</Filter>
+      <Filter>depth map fusion</Filter>
     </ClCompile>
     <ClCompile Include="CameraPoseEstimator.cpp">
-      <Filter>Camera pose estimation</Filter>
+      <Filter>camera pose estimation</Filter>
     </ClCompile>
     <ClCompile Include="CameraPoseEstimator1.cpp">
-      <Filter>Camera pose estimation</Filter>
+      <Filter>camera pose estimation</Filter>
     </ClCompile>
     <ClCompile Include="ImageRenderer4.cpp">
-      <Filter>Image Rendering</Filter>
+      <Filter>image rendering</Filter>
     </ClCompile>
     <ClCompile Include="ReconstructionPipeline.cpp">
       <Filter>Quelldateien</Filter>
@@ -171,61 +171,61 @@
       <Filter>MRF 2.2 %28lib%29</Filter>
     </ClInclude>
     <ClInclude Include="LfpLoader.h">
-      <Filter>Light Field</Filter>
+      <Filter>light field</Filter>
     </ClInclude>
     <ClInclude Include="LightFieldPicture.h">
-      <Filter>Light Field</Filter>
+      <Filter>light field</Filter>
     </ClInclude>
     <ClInclude Include="lfpsplitter.h">
-      <Filter>Light Field</Filter>
+      <Filter>light field</Filter>
     </ClInclude>
     <ClInclude Include="ImageRenderer1.h">
-      <Filter>Image Rendering</Filter>
+      <Filter>image rendering</Filter>
     </ClInclude>
     <ClInclude Include="CDCDepthEstimator.h">
-      <Filter>Depth Estimation</Filter>
+      <Filter>depth estimation</Filter>
     </ClInclude>
     <ClInclude Include="DepthEstimator1.h">
-      <Filter>Depth Estimation</Filter>
+      <Filter>depth estimation</Filter>
     </ClInclude>
     <ClInclude Include="DepthEstimator.h">
-      <Filter>Depth Estimation</Filter>
+      <Filter>depth estimation</Filter>
     </ClInclude>
     <ClInclude Include="StereoBMDisparityEstimator.h">
-      <Filter>Depth Estimation</Filter>
+      <Filter>depth estimation</Filter>
     </ClInclude>
     <ClInclude Include="RGBDMerger.h">
-      <Filter>Depth Map Fusion</Filter>
+      <Filter>depth map fusion</Filter>
     </ClInclude>
     <ClInclude Include="RGBDMerger1.h">
-      <Filter>Depth Map Fusion</Filter>
+      <Filter>depth map fusion</Filter>
     </ClInclude>
     <ClInclude Include="ImageRenderer.h">
-      <Filter>Image Rendering</Filter>
+      <Filter>image rendering</Filter>
     </ClInclude>
     <ClInclude Include="ImageRenderer2.h">
-      <Filter>Image Rendering</Filter>
+      <Filter>image rendering</Filter>
     </ClInclude>
     <ClInclude Include="ImageRenderer3.h">
-      <Filter>Image Rendering</Filter>
+      <Filter>image rendering</Filter>
     </ClInclude>
     <ClInclude Include="NormalDistribution.h">
-      <Filter>Image Rendering</Filter>
+      <Filter>image rendering</Filter>
     </ClInclude>
     <ClInclude Include="DepthToPointTranslator1.h">
-      <Filter>Depth Map Fusion</Filter>
+      <Filter>depth map fusion</Filter>
     </ClInclude>
     <ClInclude Include="DepthToPointTranslator.h">
-      <Filter>Depth Map Fusion</Filter>
+      <Filter>depth map fusion</Filter>
     </ClInclude>
     <ClInclude Include="CameraPoseEstimator1.h">
-      <Filter>Camera pose estimation</Filter>
+      <Filter>camera pose estimation</Filter>
     </ClInclude>
     <ClInclude Include="CameraPoseEstimator.h">
-      <Filter>Camera pose estimation</Filter>
+      <Filter>camera pose estimation</Filter>
     </ClInclude>
     <ClInclude Include="ImageRenderer4.h">
-      <Filter>Image Rendering</Filter>
+      <Filter>image rendering</Filter>
     </ClInclude>
     <ClInclude Include="ReconstructionPipeline.h">
       <Filter>Headerdateien</Filter>

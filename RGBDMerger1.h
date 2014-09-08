@@ -13,8 +13,8 @@ class RGBDMerger1 :
 	DepthToPointTranslator* d2pTranslator;
 	FeatureDetector* detector;
 	DescriptorExtractor* extractor;
-	//ocl::BruteForceMatcher_OCL_base* matcher;
-	BFMatcher* matcher;
+	//BFMatcher* matcher;
+	ocl::BruteForceMatcher_OCL_base* matcher;
 
 public:
 	RGBDMerger1(void);

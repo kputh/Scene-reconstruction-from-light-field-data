@@ -42,7 +42,7 @@ Mat StereoBMDisparityEstimator::estimateDepth(const LightFieldPicture lightfield
 	StereoBM stereo = StereoBM(StereoBM::BASIC_PRESET, 32, 21);
 	stereo(image1, image2, disparity, CV_32F);
 
-	/* debug */
+	/* start of debugging code */
 	const int windowFlags = WINDOW_NORMAL;
 	const string window1 = "image1";
 	namedWindow(window1, windowFlags);
@@ -57,7 +57,7 @@ Mat StereoBMDisparityEstimator::estimateDepth(const LightFieldPicture lightfield
 	imshow(window3, disparity);
 
 	waitKey(0);
-	/* end of debug code */
+	/* end of debugging code */
 
 	return disparity;
 }

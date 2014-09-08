@@ -6,7 +6,7 @@
 using namespace cv;
 
 /**
- * Loads light field data from Light Field Picture files (Lytro's raw.lfp files).
+ * Loads light-field data from Lytro's raw.lfp files.
  *
  * Utilites Nirav Patel's lfdsplitter (https://github.com/nrpatel/lfptools) to
  * split the file into it's components and rapidjson

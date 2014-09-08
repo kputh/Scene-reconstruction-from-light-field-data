@@ -24,6 +24,7 @@ public:
 	ImageRenderer(void);
 	~ImageRenderer(void);
 
+	// mutators (and accessors) for parameters
 	LightFieldPicture getLightfield() const;
 	virtual void setLightfield(const LightFieldPicture& lightfield);
 	float getAlpha() const;

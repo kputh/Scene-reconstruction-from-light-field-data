@@ -5,7 +5,8 @@
 
 /**
  * A refocus algorithm for rendering images from light fields. It is based on
- * equation 4.2 from Ren Ng's dissertation "Digital Light Field Photography".
+ * equation 4.2 from Ren Ng's dissertation "Digital Light Field Photography". It
+ * is a simplified and improved version of ImageRenderer1.
  *
  * This algorithms works by shifting and adding the individual sub-aperture
  * images.

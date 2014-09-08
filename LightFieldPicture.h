@@ -11,7 +11,7 @@ using namespace cv;
 using namespace ocl;
 
 /**
- * The data structure for a light field from a Light Field Picture (*.lfp) file.
+ * The data structure for a light-field from a Light Field Picture (raw.lfp) file.
  *
  * @author      Kai Puth <kai.puth@student.htw-berlin.de>
  * @version     0.1
@@ -44,10 +44,10 @@ public:
 	typedef Vec3f luminanceType;
 	static const int IMAGE_TYPE;
 
-	Size SPARTIAL_RESOLUTION;	// should be lower-case
+	Size SPARTIAL_RESOLUTION;	// TODO should be lower-case
 	Size ANGULAR_RESOLUTION;
 
-	LfpLoader loader;	// should be private
+	LfpLoader loader;	// TODO should be private
 
 	LightFieldPicture(void);
 	LightFieldPicture(const string& pathToFile);
@@ -58,7 +58,11 @@ public:
 	luminanceType getLuminanceF(const float x, const float y,
 		const float u, const float v) const;
 
-	oclMat getSubapertureImageI(const unsigned short u, const unsigned short v) const;
+	// retrieve an extracted sub-aperture image
+	oclMat getSubapertureImageI(const unsigned short u,
+		const unsigned short v) const;
+
+	// interpolate an sub-aperture image
 	oclMat getSubapertureImageF(const double u, const double v) const;
 
 	Mat getRawImage() const;

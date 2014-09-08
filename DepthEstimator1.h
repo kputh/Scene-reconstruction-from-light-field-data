@@ -1,5 +1,13 @@
 
 #include "DepthEstimator.h"
+
+/**
+ * Unfinished implementation.
+ *
+ * @author      Kai Puth <kai.puth@student.htw-berlin.de>
+ * @version     0.1
+ * @since       2014-07-08
+ */
 class DepthEstimator1 :
 	public DepthEstimator
 {

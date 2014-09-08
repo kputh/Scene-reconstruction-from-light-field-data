@@ -3,8 +3,8 @@
 #include "DepthToPointTranslator.h"
 
 /**
- * The abstract base class for any algorithm that translates reconstructed depth
- * into 3D points.
+ * Implementation of an algorithm that translates reconstructed depth into 3D
+ * points.
  *
  * @author      Kai Puth <kai.puth@student.htw-berlin.de>
  * @version     0.1

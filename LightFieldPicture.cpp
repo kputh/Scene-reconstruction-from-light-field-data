@@ -50,8 +50,9 @@ void LightFieldPicture::extractSubapertureImageAtlas()
 	Mat integralMap;
 	convertMaps(map, noArray(), integralMap, noArray(), CV_16SC2, true);
 
-	ocl::remap(oclMat(this->rawImage), this->subapertureImageAtlas, oclMat(integralMap),
-		oclMat(), INTER_NEAREST, BORDER_CONSTANT, Scalar::all(0));
+	ocl::remap(oclMat(this->rawImage), this->subapertureImageAtlas,
+		oclMat(integralMap), oclMat(), INTER_NEAREST, BORDER_CONSTANT,
+		Scalar::all(0));
 
 	// correct line shift due to hexagonal microlens array structure
 	for (y = 0; y < dstHeight; y++)
@@ -66,8 +67,8 @@ void LightFieldPicture::extractSubapertureImageAtlas()
 				map.at<coord>(y, x) = Vec2f(x + 0.5, y);
 		}
 	}
-	ocl::remap(this->subapertureImageAtlas, this->subapertureImageAtlas, oclMat(map),
-		oclMat(), INTER_LINEAR, BORDER_REPLICATE);
+	ocl::remap(this->subapertureImageAtlas, this->subapertureImageAtlas,
+		oclMat(map), oclMat(), INTER_LINEAR, BORDER_REPLICATE);
 }
 
 
@@ -94,7 +95,8 @@ LightFieldPicture::LightFieldPicture(const std::string& pathToFile)
 	const Size correctedRawSize = RotatedRect(IMAGE_ORIGIN, loader.bayerImage.size(),
 		-this->rotationAngle).boundingRect().size();
 	const double lensWidth		= lensPitchInPixels * loader.scaleFactor[0];
-	const double rowHeight		= lensPitchInPixels * loader.scaleFactor[1] * cos(M_PI / 6.0);
+	const double rowHeight		= lensPitchInPixels * loader.scaleFactor[1] *
+		cos(M_PI / 6.0);
 	const int columnCount		= ceil(correctedRawSize.width / lensWidth) + 1;
 	const int rowCount			= ceil(correctedRawSize.height / rowHeight) + 1;
 	this->SPARTIAL_RESOLUTION	= Size(columnCount, rowCount);
@@ -226,7 +228,8 @@ LightFieldPicture::luminanceType LightFieldPicture::getLuminanceF(
 
 	Mat singlePixel;
 	const Size singlePixelSize = Size(1, 1);
-	Vec2f lensSize = Vec2f(this->ANGULAR_RESOLUTION.width, this->ANGULAR_RESOLUTION.height);
+	Vec2f lensSize = Vec2f(this->ANGULAR_RESOLUTION.width,
+		this->ANGULAR_RESOLUTION.height);
 	Vec2f centralLensCenter = Vec2f(this->SPARTIAL_RESOLUTION.width,
 		this->SPARTIAL_RESOLUTION.height) / 2.0; // muss eigentlich auf ein Vielfaches der Linsengröße gerundet werden
 	Vec2f lensCenter = centralLensCenter + Vec2f(x, y).mul(lensSize);
@@ -245,9 +248,10 @@ oclMat LightFieldPicture::getSubapertureImageI(const unsigned short u,
 }
 
 
-oclMat LightFieldPicture::getSubapertureImageF(const double u, const double v) const
+oclMat LightFieldPicture::getSubapertureImageF(const double u, const double v)
+	const
 {
-	// TODO Koordinaten außerhalb des Linsenbildes besser behandeln
+	// TODO handle coordinates outside the microlens' image
 	const int minAngle = 0;
 	const int maxAngle = ANGULAR_RESOLUTION.width - 1;
 	int fu = min(maxAngle, max(minAngle, (int) floor(u)));
@@ -306,8 +310,6 @@ double LightFieldPicture::getRawFocalLength() const
 void LightFieldPicture::generateCalibrationMatrix()
 {
 	// generate calibration matrix
-	//const double imageWidth = this->loader.bayerImage.size().width;
-	//const double imageHeight = this->loader.bayerImage.size().height;
 	const double imageWidth = this->SPARTIAL_RESOLUTION.width;
 	const double imageHeight = this->SPARTIAL_RESOLUTION.height;
 	const double aspectRatio = imageHeight / imageWidth;
